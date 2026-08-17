@@ -18,7 +18,7 @@ function rankingTableHtml(cat, rows) {
         <td>${r.losses}</td>
         <td>${r.points}</td>
         <td>${r.diff}</td>
-        <td>${r.headToHead}${r.note ? `<span class="tie-flag">⚠ tie</span>` : ""}</td>
+        <td>${r.note ? `<span class="tie-flag">⚠ ${r.note}</span>` : ""}</td>
       </tr>`;
   }).join("");
 
@@ -30,7 +30,7 @@ function rankingTableHtml(cat, rows) {
           <table class="ranking-table">
             <thead><tr>
               <th>Hạng</th><th>Mã</th><th>VĐV</th><th>Trận</th><th>Thắng</th><th>Thua</th>
-              <th>Điểm</th><th>Hiệu số</th><th>Đối đầu</th>
+              <th>Điểm</th><th>Hiệu số</th><th>Ghi chú</th>
             </tr></thead>
             <tbody>${rankRows}</tbody>
           </table>

@@ -5,7 +5,7 @@ const CATEGORIES = [
   { key: "na", label: "Đôi Nam Open", sheetName: "Đôi Nam Open", standingsKey: "Đôi Nam" },
 ];
 
-const STAGE_ORDER = ["Vòng loại", "Bán kết", "Tranh hạng Ba", "Chung kết"];
+const STAGE_ORDER = ["Chung kết", "Bán kết", "Vòng loại"];
 
 function statusAttr(status) {
   if (status === "Hoàn thành") return "completed";
@@ -70,31 +70,57 @@ function stageLabel(stage, round) {
   return stage;
 }
 
-function renderCategoryPanel(cat, matches, nameMap) {
+function renderCategoryPanel(cat, matches, standingsRows, nameMap) {
   const catMatches = matches.filter((m) => m.category === cat.sheetName);
 
-  // group by stage, preserving STAGE_ORDER, and within "Vòng loại" by round number
-  const groups = [];
-  for (const stage of STAGE_ORDER) {
+  // group by stage, preserving STAGE_ORDER (final first, then semis, then group stage
+  // rounds in order); "Tranh hạng Ba" is intentionally dropped — no 3rd-place match.
+  // Each stage gets a big heading; "Vòng loại" additionally nests smaller per-round labels.
+  const stageBlocksHtml = STAGE_ORDER.map((stage) => {
     const inStage = catMatches.filter((m) => m.stage === stage);
-    if (!inStage.length) continue;
+    if (!inStage.length) return "";
+
+    let body;
     if (stage === "Vòng loại") {
       const rounds = [...new Set(inStage.map((m) => m.round))].sort((a, b) => Number(a) - Number(b));
-      for (const round of rounds) {
-        groups.push({ label: stageLabel(stage, round), items: inStage.filter((m) => m.round === round) });
-      }
+      body = rounds.map((round) => `
+        <div class="round-group">
+          <div class="round-group__label">${stageLabel(stage, round)}</div>
+          <div class="match-list">
+            ${inStage.filter((m) => m.round === round).map((m) => matchCardHtml(m, nameMap)).join("")}
+          </div>
+        </div>`).join("");
     } else {
-      groups.push({ label: stage, items: inStage });
+      body = `
+        <div class="round-group">
+          <div class="match-list">
+            ${inStage.map((m) => matchCardHtml(m, nameMap)).join("")}
+          </div>
+        </div>`;
     }
-  }
 
-  const groupsHtml = groups.map((g) => `
-    <div class="round-group">
-      <div class="round-group__label">${g.label}</div>
-      <div class="match-list">
-        ${g.items.map((m) => matchCardHtml(m, nameMap)).join("")}
-      </div>
-    </div>`).join("");
+    return `
+      <div class="stage-block">
+        <div class="stage-block__title">${stage}</div>
+        ${body}
+      </div>`;
+  }).join("");
+
+  const rankRows = standingsRows.map((r) => {
+    const top4 = Number(r.rank) <= 4;
+    return `
+      <tr data-top4="${top4}">
+        <td><span class="rank-badge">${r.rank}</span></td>
+        <td>${r.code}</td>
+        <td>${r.players}</td>
+        <td>${r.played}</td>
+        <td>${r.wins}</td>
+        <td>${r.losses}</td>
+        <td>${r.points}</td>
+        <td>${r.diff}</td>
+        <td>${r.note ? `<span class="tie-flag">⚠ ${r.note}</span>` : ""}</td>
+      </tr>`;
+  }).join("");
 
   return `
     <section class="category-panel" data-cat="${cat.key}">
@@ -102,11 +128,24 @@ function renderCategoryPanel(cat, matches, nameMap) {
         <div class="stage__head">
           <h2 class="stage__title">Lịch thi đấu — ${cat.label}</h2>
         </div>
-        ${groupsHtml}
+        ${stageBlocksHtml}
         <div class="match-empty" hidden>
           <div class="match-empty__title">Không tìm thấy trận đấu hoặc vận động viên phù hợp.</div>
           <div class="match-empty__sub">Kiểm tra lại chính tả, hoặc liên hệ BTC để được hỗ trợ.</div>
         </div>
+      </div>
+      <div class="stage">
+        <div class="stage__head"><h2 class="stage__title">Bảng xếp hạng vòng loại</h2></div>
+        <div class="table-scroll">
+          <table class="ranking-table">
+            <thead><tr>
+              <th>Hạng</th><th>Mã</th><th>VĐV</th><th>Trận</th><th>Thắng</th><th>Thua</th>
+              <th>Điểm</th><th>Hiệu số</th><th>Ghi chú</th>
+            </tr></thead>
+            <tbody>${rankRows}</tbody>
+          </table>
+        </div>
+        <p class="rr-hint">Top 4 (đánh dấu lime) vào Bán kết. ⚠ = cần bốc thăm phân định nếu vẫn bằng nhau sau đối đầu.</p>
       </div>
     </section>`;
 }
@@ -155,7 +194,7 @@ async function main() {
     const [matches, standings] = await Promise.all([loadMatches(), loadStandings()]);
     const nameMap = buildTeamNameMap(standings);
     root.innerHTML = CATEGORIES
-      .map((cat) => renderCategoryPanel(cat, matches, nameMap))
+      .map((cat) => renderCategoryPanel(cat, matches, standings[cat.standingsKey] || [], nameMap))
       .join("");
     document.querySelector('.category-panel[data-cat="hh"]').setAttribute("data-active", "true");
     initTabs();
