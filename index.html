@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pickleball F1 Club Open 2026</title>
+<meta name="description" content="Pickleball F1 Club Open 2026 — 23/08/2026, Sunflower Arena Pickleball. Xem lịch thi đấu, tỉ số trực tiếp và điều lệ giải đấu." />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<!--
+THESIS: The site is the poster's own scoreboard, not a brochure about it — extends the
+poster's court grid, stenciled navy-on-lime type, and sky/navy/lime system.
+OWN-WORLD: sky #008BDC, navy #0D3D61, lime #D3FF34, diagonal court texture, Anton display,
+Inter body, tabular numerals on every score.
+STORY: reader gets event + date + venue + countdown instantly, then one clear choice:
+read the rules.
+FIRST VIEWPORT: full-bleed real poster art, oversized navy-on-lime countdown block
+overlapping it, venue pill row beneath.
+FORM: sports-scoreboard system extending the pinned poster brief.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
+review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+-->
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>
+      </span>
+      F1 PICKLEBALL
+    </a>
+    <button class="nav__toggle" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="Mở menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Điều hướng chính">
+      <a class="nav__link" href="index.html" aria-current="page">Trang chủ</a>
+      <a class="nav__link" href="schedule.html">Lịch thi đấu</a>
+      <a class="nav__link" href="standings.html">Bảng xếp hạng</a>
+      <a class="nav__link" href="rules.html">Điều lệ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <img class="hero__poster" src="assets/poster.png" alt="Poster Pickleball F1 Club Open 2026 — 23/08/2026, 08:00-12:00, Sunflower Arena Pickleball, 6 Hoang Trong Mau" />
+
+    <div class="hero__below">
+      <div class="countdown-block reveal" data-countdown>
+        <div class="countdown-block__label" data-cd-label>Đếm ngược đến ngày thi đấu</div>
+        <div class="countdown">
+          <div class="countdown__unit"><div class="countdown__value" data-cd-days>00</div><div class="countdown__unit-label">Ngày</div></div>
+          <div class="countdown__unit"><div class="countdown__value" data-cd-hours>00</div><div class="countdown__unit-label">Giờ</div></div>
+          <div class="countdown__unit"><div class="countdown__value" data-cd-minutes>00</div><div class="countdown__unit-label">Phút</div></div>
+          <div class="countdown__unit"><div class="countdown__value" data-cd-seconds>00</div><div class="countdown__unit-label">Giây</div></div>
+        </div>
+
+        <div class="event-facts">
+          <div class="event-fact">
+            <span class="event-fact__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>
+            <span><div class="event-fact__title">Chủ Nhật, 23/08/2026</div><div class="event-fact__sub">08:00 – 12:00</div></span>
+          </div>
+          <div class="event-fact">
+            <span class="event-fact__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+            <span><div class="event-fact__title">Sunflower Arena Pickleball</div><div class="event-fact__sub">6 Hoang Trong Mau</div></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="split-band">
+    <a class="split-tile split-tile--schedule court-texture" href="schedule.html">
+      <div class="split-tile__eyebrow">Trực tiếp</div>
+      <h2 class="split-tile__title">Lịch thi đấu</h2>
+      <p class="split-tile__desc">Tỉ số, lịch trận và bảng xếp hạng — cập nhật trực tiếp từ Google Sheet của BTC.</p>
+      <span class="split-tile__arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="split-tile split-tile--rules court-texture" href="rules.html">
+      <div class="split-tile__eyebrow">Trước khi ra sân</div>
+      <h2 class="split-tile__title">Điều lệ</h2>
+      <p class="split-tile__desc">Thể thức vòng bảng, bán kết, chung kết, cách tính điểm và xếp hạng.</p>
+      <span class="split-tile__arrow"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <div class="site-footer__brand">F1 PICKLEBALL</div>
+      <div class="site-footer__sponsors">
+        <span>FPT Software</span>
+        <span>DCE</span>
+        <span>F1.YU</span>
+      </div>
+    </div>
+    <div class="site-footer__meta">Sunflower Arena Pickleball · 6 Hoang Trong Mau · 23/08/2026</div>
+  </div>
+</footer>
+
+<script src="js/nav.js"></script>
+<script src="js/countdown.js"></script>
+<script src="js/reveal.js"></script>
+</body>
+</html>

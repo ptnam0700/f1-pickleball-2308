@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bảng xếp hạng — Pickleball F1 Club Open 2026</title>
+<meta name="description" content="Bảng xếp hạng trực tiếp — Pickleball F1 Club Open 2026." />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg></span>
+      F1 PICKLEBALL
+    </a>
+    <button class="nav__toggle" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="Mở menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Điều hướng chính">
+      <a class="nav__link" href="index.html">Trang chủ</a>
+      <a class="nav__link" href="schedule.html">Lịch thi đấu</a>
+      <a class="nav__link" href="standings.html" aria-current="page">Bảng xếp hạng</a>
+      <a class="nav__link" href="rules.html">Điều lệ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="schedule-hero court-texture">
+    <div class="schedule-hero__inner">
+      <h1 class="section-title">Bảng xếp hạng</h1>
+      <p class="section-lede">Cập nhật trực tiếp từ Google Sheet của BTC — tải lại trang để xem thứ hạng mới nhất.</p>
+      <div class="tabbar" role="tablist">
+        <button class="tabbar__btn" data-cat="hh" role="tab" aria-selected="true">Đôi Hỗn Hợp</button>
+        <button class="tabbar__btn" data-cat="na" role="tab" aria-selected="false">Đôi Nam Open</button>
+      </div>
+      <p class="schedule-status" id="standings-status">Đang tải dữ liệu…</p>
+    </div>
+  </section>
+
+  <div id="standings-root"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <div class="site-footer__brand">F1 PICKLEBALL</div>
+      <div class="site-footer__sponsors">
+        <span>FPT Software</span>
+        <span>DCE</span>
+        <span>F1.YU</span>
+      </div>
+    </div>
+    <div class="site-footer__meta">Sunflower Arena Pickleball · 6 Hoang Trong Mau · 23/08/2026</div>
+  </div>
+</footer>
+
+<script src="js/nav.js"></script>
+<script src="js/sheet-data.js"></script>
+<script src="js/standings.js"></script>
+</body>
+</html>
