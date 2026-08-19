@@ -42,6 +42,18 @@ function matchRowHtml(code, nameMap, score, isWinner) {
     </div>`;
 }
 
+const TROPHY_WATERMARK = `
+  <div class="match-card__watermark" aria-hidden="true">
+    <svg viewBox="0 0 100 120" fill="none">
+      <path d="M25 10 C25 35 35 50 50 50 C65 50 75 35 75 10 Z" fill="currentColor"/>
+      <path d="M25 15 C10 15 10 35 25 38" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M75 15 C90 15 90 35 75 38" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <rect x="46" y="50" width="8" height="20" fill="currentColor"/>
+      <rect x="35" y="70" width="30" height="8" rx="2" fill="currentColor"/>
+      <rect x="28" y="80" width="44" height="10" rx="2" fill="currentColor"/>
+    </svg>
+  </div>`;
+
 function matchCardHtml(m, nameMap) {
   const status = statusAttr(m.status);
   const hasScore = m.status === "Hoàn thành";
@@ -54,8 +66,11 @@ function matchCardHtml(m, nameMap) {
   const searchText = [m.teamA, teamNameLine(m.teamA, nameMap), m.teamB, teamNameLine(m.teamB, nameMap)]
     .join(" ").toLowerCase();
 
+  const isFinal = m.stage === "Chung kết";
+
   return `
-    <div class="match-card" data-status="${status}" data-search="${searchText.replace(/"/g, "&quot;")}">
+    <div class="match-card${isFinal ? " match-card--final" : ""}" data-status="${status}" data-search="${searchText.replace(/"/g, "&quot;")}">
+      ${isFinal ? TROPHY_WATERMARK : ""}
       <div class="match-card__head">
         <span class="match-card__badge match-card__badge--${status}">${STATUS_BADGE_LABEL[status]}</span>
       </div>
@@ -91,9 +106,10 @@ function renderCategoryPanel(cat, matches, standingsRows, nameMap) {
           </div>
         </div>`).join("");
     } else {
+      const centerClass = inStage.length === 1 ? " match-list--center" : "";
       body = `
         <div class="round-group">
-          <div class="match-list">
+          <div class="match-list${centerClass}">
             ${inStage.map((m) => matchCardHtml(m, nameMap)).join("")}
           </div>
         </div>`;

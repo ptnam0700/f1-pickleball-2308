@@ -452,6 +452,8 @@ main{ display: block; }
 .match-list{ display: grid; gap: var(--space-3); grid-template-columns: 1fr; }
 @media (min-width: 700px){
   .match-list{ grid-template-columns: repeat(2, 1fr); }
+  .match-list--center{ grid-template-columns: 1fr; justify-items: center; }
+  .match-list--center .match-card{ width: 100%; max-width: 460px; }
 }
 
 /* match card — stacked rows (mobile-first, matches PPA Tour results pattern) */
@@ -463,6 +465,27 @@ main{ display: block; }
   border: 2px solid transparent;
 }
 .match-card[data-status="completed"]{ border-color: rgba(211,255,52,0.55); }
+
+.match-card--final{ position: relative; overflow: hidden; }
+.match-card--final::before{
+  content: "";
+  position: absolute; inset: 0; margin: auto;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(201,162,39,0.16) 0%, rgba(201,162,39,0) 72%);
+  filter: blur(18px);
+  pointer-events: none; z-index: 0;
+}
+.match-card__watermark{
+  position: absolute; inset: 0; margin: auto;
+  width: 150px; height: 150px;
+  display: flex; align-items: center; justify-content: center;
+  color: #C9A227;
+  opacity: 0.14;
+  filter: blur(0.5px);
+  pointer-events: none; z-index: 0;
+}
+.match-card__watermark svg{ width: 100%; height: 100%; }
+.match-card--final > *:not(.match-card__watermark){ position: relative; z-index: 1; }
 .match-card__head{ display: flex; justify-content: flex-end; margin-bottom: var(--space-3); }
 .match-card__badge{
   font-size: 0.7rem; font-weight: 800; letter-spacing: 0.03em;
@@ -548,9 +571,10 @@ main{ display: block; }
   box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 .match-score-input::-webkit-outer-spin-button,
-.match-score-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+.match-score-input::-webkit-inner-spin-button{ -webkit-appearance: none; appearance: none; margin: 0; }
 .match-score-input::placeholder{ color: #CBD5E1; font-weight: 700; }
 .match-score-input:hover{ border-color: #CBD5E1; }
 .match-score-input:focus{
