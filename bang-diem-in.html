@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="vi" data-size="a0">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bảng điểm in — F1 Club Open 2026</title>
+<style id="page-size-style">@page{ size:A0 landscape; margin:0; }</style>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:ital,wght@0,500;0,600;0,700;0,800;1,600&display=swap');
+
+:root{
+  --sky:        #008BDC;
+  --sky-deep:   #0072B8;
+  --navy:       #0D3D61;
+  --navy-deep:  #082B4B;
+  --navy-ink:   #082A44;
+  --lime:       #D3FF34;
+  --lime-deep:  #B8E01C;
+  --white:      #FFFFFF;
+  --sky-tint:   #EAF6FF;
+  --ink-on-sky: var(--navy-ink);
+  --font-display: 'Anton', 'Archivo Black', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+*,*::before,*::after{ box-sizing:border-box; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+html,body{ margin:0; background:#04263F; }
+body{
+  font-family:var(--font-body);
+  color:var(--ink-on-sky);
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{ font-family:var(--font-display); text-transform:uppercase; letter-spacing:-0.01em; margin:0; line-height:1.05; }
+
+/* ---------------------------------------------------------------- controls (screen only) */
+.controls{
+  position:fixed; top:14px; right:14px; z-index:50;
+  display:flex; align-items:center; gap:10px;
+  background:var(--navy); border-radius:999px;
+  padding:8px 10px 8px 16px;
+  box-shadow:0 14px 30px -10px rgba(0,0,0,0.55);
+  font-family:var(--font-body);
+}
+.controls__label{ color:rgba(207,231,250,0.7); font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }
+.controls__group{ display:flex; background:rgba(255,255,255,0.08); border-radius:999px; padding:3px; }
+.controls__btn{
+  appearance:none; border:none; cursor:pointer; font-family:var(--font-body); font-weight:800;
+  font-size:13px; padding:7px 14px; border-radius:999px; color:#CFE7FA; background:transparent;
+  transition:background .15s, color .15s;
+}
+.controls__btn[aria-pressed="true"]{ background:var(--lime); color:var(--navy-ink); }
+.controls__print{
+  appearance:none; border:none; cursor:pointer; font-family:var(--font-display); letter-spacing:0.02em;
+  font-size:14px; padding:9px 18px; border-radius:999px; background:var(--lime); color:var(--navy-ink);
+}
+.controls__print:hover{ background:var(--lime-deep); }
+.controls__sync{
+  appearance:none; border:none; cursor:pointer; font-family:var(--font-body); font-weight:800;
+  font-size:13px; padding:7px 14px; border-radius:999px; color:var(--navy-ink); background:#CFE7FA;
+}
+.controls__sync:hover{ background:var(--white); }
+.controls__sync:disabled{ opacity:0.6; cursor:wait; }
+.controls__status{
+  position:fixed; top:66px; right:14px; z-index:50; font-size:11.5px; font-weight:700;
+  color:#CFE7FA; background:rgba(8,42,68,0.85); padding:5px 12px; border-radius:999px;
+}
+.controls__hint{
+  position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:50;
+  background:rgba(8,42,68,0.9); color:#CFE7FA; font-size:12.5px; padding:8px 16px; border-radius:999px;
+  font-weight:600; letter-spacing:0.01em;
+}
+
+/* ---------------------------------------------------------------- preview stage (screen only) */
+.stage{ min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:70px 0 60px; }
+.fit{ transform-origin: top center; }
+
+/* ---------------------------------------------------------------- the physical page, authored at A0 landscape mm */
+.page-frame{ width:1189mm; height:841mm; overflow:visible; }
+html[data-size="a1"] .page-frame{ width:841mm; height:594mm; overflow:hidden; }
+html[data-size="a1"] .page{ transform:scale(0.70710678); transform-origin:top left; }
+
+.page{
+  width:1189mm; height:841mm;
+  background:var(--sky);
+  padding:16mm;
+  display:grid;
+  grid-template-rows:62mm 420mm 140mm 155mm;
+  row-gap:8mm;
+  position:relative;
+}
+
+/* ---------------------------------------------------------------- court texture */
+.court-texture{ position:relative; overflow:hidden; }
+.court-texture::before{
+  content:""; position:absolute; inset:-20% -10%; pointer-events:none;
+  background-image:repeating-linear-gradient(-35deg, rgba(255,255,255,0.14) 0mm, rgba(255,255,255,0.14) 0.7mm, transparent 0.7mm, transparent 10mm);
+}
+
+/* ---------------------------------------------------------------- header */
+.head{ display:grid; grid-template-columns:1fr auto; align-items:start; gap:10mm; color:var(--white); border-radius:8mm; background:var(--navy); padding:8mm 12mm; }
+.head__brand{ font-family:var(--font-body); font-weight:800; font-size:6mm; letter-spacing:0.08em; color:rgba(207,231,250,0.75); }
+.head__title{ font-size:20mm; color:var(--lime); margin-top:2mm; }
+.head__subtitle{ font-size:9mm; margin-top:1mm; color:var(--white); }
+.head__facts{ display:flex; gap:8mm; margin-top:4mm; font-family:var(--font-body); font-weight:700; font-size:5mm; color:#CFE7FA; }
+.head__facts b{ color:var(--lime); font-weight:800; }
+.head__right{ display:flex; flex-direction:column; align-items:flex-end; gap:6mm; }
+.head__logos{ display:flex; align-items:center; gap:6mm; background:var(--white); border-radius:5mm; padding:4mm 6mm; }
+.head__logos img{ height:9mm; width:auto; display:block; }
+.head__status{ font-size:4.6mm; font-weight:800; color:var(--navy-ink); background:var(--lime); border-radius:5mm; padding:3mm 6mm; text-align:right; line-height:1.3; }
+
+/* ---------------------------------------------------------------- category panels (round robin) */
+.groups{ display:grid; grid-template-columns:62fr 38fr; gap:8mm; min-height:0; }
+.panel{ background:var(--sky-tint); border-radius:6mm; padding:5mm; display:flex; flex-direction:column; min-height:0; }
+.panel__head{ display:flex; align-items:baseline; justify-content:space-between; border-radius:4mm; padding:3mm 5mm; margin-bottom:4mm; }
+.panel--hh .panel__head{ background:var(--lime); }
+.panel--na .panel__head{ background:var(--white); border:0.6mm solid var(--sky-deep); }
+.panel__head h2{ font-size:7mm; color:var(--navy-ink); }
+.panel__head span{ font-family:var(--font-body); font-weight:800; font-size:3.6mm; color:var(--navy-deep); text-transform:uppercase; letter-spacing:0.04em; }
+
+.rounds{ display:grid; gap:3mm; flex:1; min-height:0; }
+.panel--hh .rounds{ grid-template-columns:repeat(5,1fr); }
+.panel--na .rounds{ grid-template-columns:repeat(5,1fr); }
+.round{ display:flex; flex-direction:column; }
+.round h3{ text-align:center; font-size:4.2mm; color:var(--navy-deep); margin-bottom:3.4mm; font-family:var(--font-body); font-weight:800; letter-spacing:0.03em; }
+.round__list{ flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:4mm; }
+
+.match{ background:var(--white); border:0.4mm solid #BFDDEC; border-radius:3mm; padding:3.4mm 3.6mm; }
+.match__tag{ font-size:3.1mm; font-weight:800; color:var(--sky-deep); letter-spacing:0.02em; }
+.match__team{
+  display:grid; grid-template-columns:9.5mm 1fr 15mm; align-items:center; gap:2mm;
+  border-top:0.3mm solid #E1EEF4; padding-top:2.2mm; margin-top:2.2mm;
+}
+.match__team:first-of-type{ border-top:none; padding-top:0; margin-top:0; }
+.match__code{ font-weight:800; font-size:3.4mm; color:var(--navy-ink); }
+.match__name{
+  font-size:5.9mm; font-weight:700; color:var(--navy-ink); line-height:1.14;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.match__score{
+  aspect-ratio:1/1; width:100%; height:auto; border:0.8mm solid var(--navy); border-radius:1.6mm; background:var(--sky-tint);
+  text-align:center; font-size:5.4mm; font-weight:800; color:var(--navy-ink);
+}
+.match__meta{ display:flex; align-items:center; justify-content:space-between; margin-bottom:1.8mm; }
+.match__court{ font-size:4mm; font-weight:800; color:var(--white); background:var(--sky-deep); border-radius:999px; padding:0.8mm 2.8mm; letter-spacing:0.02em; }
+.panel--na .match{ padding:4.6mm 5mm; }
+.panel--na .match__team{ grid-template-columns:12mm 1fr 17mm; gap:2.6mm; }
+.panel--na .match__code{ font-size:4mm; }
+.panel--na .match__name{ font-size:5.9mm; }
+.panel--na .match__score{ font-size:6mm; }
+.panel--na .match__court{ font-size:4.6mm; padding:1mm 3.2mm; }
+
+/* ---------------------------------------------------------------- standings (blank, hand-filled) */
+.standings{ display:grid; grid-template-columns:1fr 1fr; gap:8mm; min-height:0; }
+.rank{ background:var(--navy); border-radius:6mm; padding:5mm 6mm; color:var(--white); display:flex; flex-direction:column; min-height:0; }
+.rank__head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:3mm; }
+.rank__head h2{ font-size:6mm; color:var(--lime); }
+.rank__head span{ font-size:3.4mm; font-weight:700; color:rgba(207,231,250,0.7); }
+table.rank__table{ width:100%; border-collapse:collapse; table-layout:fixed; flex:1; }
+table.rank__table th{ font-family:var(--font-body); font-size:2.9mm; text-transform:uppercase; letter-spacing:0.03em; color:rgba(207,231,250,0.65); text-align:left; padding:0 1.4mm 1.6mm; font-weight:700; }
+table.rank__table td{ background:rgba(255,255,255,0.06); border-bottom:0.3mm solid rgba(255,255,255,0.14); padding:1.6mm 1.4mm; font-size:3.3mm; font-weight:700; }
+table.rank__table tr[data-top4="true"] td:first-child{ color:var(--lime); }
+table.rank__table td.blank{ background:var(--white); border-radius:1mm; height:6mm; }
+th.col-name{ width:40%; } th.col-num{ width:8%; text-align:center; }
+td.col-name.blank{ background:var(--white); color:var(--navy-ink); border-radius:1mm; }
+td.col-num{ text-align:center; }
+
+/* ---------------------------------------------------------------- brackets */
+.brackets{ display:grid; grid-template-columns:1fr 1fr; gap:8mm; min-height:0; }
+.bracket{ background:var(--navy); border-radius:6mm; padding:6mm 7mm; color:var(--white); position:relative; }
+.bracket__head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4mm; }
+.bracket__head h2{ font-size:6.4mm; color:var(--lime); }
+.bracket__head span{ font-size:3.2mm; font-weight:700; color:rgba(207,231,250,0.65); }
+.bracket__tree{ display:grid; grid-template-columns:1fr 1fr; gap:10mm; align-items:center; }
+.semi{ display:grid; gap:6mm; }
+.bcard{ background:var(--white); color:var(--navy-ink); border:0.7mm solid var(--lime); border-radius:3mm; padding:3mm 3.4mm; }
+.bcard__label{ display:inline-block; background:var(--lime); border-radius:2mm; padding:1mm 2.4mm; font-size:3mm; font-weight:800; margin-bottom:2mm; }
+.bline{ display:grid; grid-template-columns:1fr 15mm; align-items:center; gap:2mm; margin-top:1.6mm; }
+.bline span:first-child{ font-size:3.3mm; font-weight:700; color:#3A5972; }
+.bline .match__score{ font-size:5mm; }
+.bracket__note{ font-size:2.9mm; font-weight:700; color:rgba(207,231,250,0.7); text-align:right; margin-top:3mm; }
+
+/* ---------------------------------------------------------------- print */
+@media print{
+  body{ background:none; }
+  .controls, .controls__hint, .controls__status{ display:none !important; }
+  .stage{ min-height:0; padding:0; display:block; }
+  .fit{ transform:none !important; }
+  .page-frame{ overflow:visible !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <span class="controls__label">Khổ giấy</span>
+  <div class="controls__group" role="group" aria-label="Chọn khổ giấy">
+    <button type="button" class="controls__btn" data-size-btn="a0" aria-pressed="true">A0</button>
+    <button type="button" class="controls__btn" data-size-btn="a1" aria-pressed="false">A1</button>
+  </div>
+  <button type="button" class="controls__sync" id="syncBtn">🔄 Tải dữ liệu Sheet</button>
+  <button type="button" class="controls__print" id="printBtn">🖨 In</button>
+</div>
+<div class="controls__status" id="syncStatus">Đang tải dữ liệu từ Google Sheet…</div>
+<div class="controls__hint">Đội / sân được kéo trực tiếp từ Google Sheet bốc thăm. Bấm "Tải dữ liệu Sheet" sau khi bốc thăm xong, rồi in.</div>
+
+<div class="stage">
+  <div class="page-frame">
+    <div class="page fit">
+
+      <header class="head court-texture">
+        <div>
+          <div class="head__brand">FPT SOFTWARE · DCE · F1.YU</div>
+          <h1 class="head__title">Pickleball F1 Club Open 2026</h1>
+          <div class="head__subtitle">Bảng điểm trực tiếp — Vòng loại &amp; Vòng trong</div>
+          <div class="head__facts">
+            <span>📅 <b>Chủ Nhật, 23/08/2026</b> · 08:00–12:00</span>
+            <span>📍 <b>Sunflower Arena Pickleball</b> · 6 Hoàng Trọng Mậu</span>
+          </div>
+        </div>
+        <div class="head__right">
+          <div class="head__status">Vòng loại: đến 11 điểm<br/>Bán kết / Chung kết: đến 15 điểm</div>
+        </div>
+      </header>
+
+      <section class="groups">
+        <section class="panel panel--hh">
+          <div class="panel__head"><h2>Đôi Hỗn Hợp</h2><span>12 cặp · 30 trận vòng loại</span></div>
+          <div class="rounds" id="hh-rounds"></div>
+        </section>
+        <section class="panel panel--na">
+          <div class="panel__head"><h2>Đôi Nam Open</h2><span>8 cặp · 20 trận vòng loại</span></div>
+          <div class="rounds" id="na-rounds"></div>
+        </section>
+      </section>
+
+      <section class="standings">
+        <section class="rank">
+          <div class="rank__head"><h2>Bảng xếp hạng — Đôi Hỗn Hợp</h2><span>Top 4 vào bán kết · Điểm ↓ Hiệu số ↓ Đối đầu ↓</span></div>
+          <table class="rank__table" id="hh-standings"></table>
+        </section>
+        <section class="rank">
+          <div class="rank__head"><h2>Bảng xếp hạng — Đôi Nam Open</h2><span>Top 4 vào bán kết</span></div>
+          <table class="rank__table" id="na-standings"></table>
+        </section>
+      </section>
+
+      <section class="brackets" id="brackets"></section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- live data from the club's Google Sheet (same source as js/sheet-data.js) ---------------- */
+const SHEET_ID = "19RxCD21GQUcgIFvx61RM5hL0GvIcS9oKEf9H6lnnyNA";
+const GID_MATCHES = "2001005";      // tab "Phân bổ sân"
+const GID_STANDINGS = "1628836208"; // tab "Dashboard"
+const CATS = { hh: 'Đôi Hỗn Hợp', na: 'Đôi Nam Open' };
+
+function gvizCsvUrl(gid){ return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`; }
+
+function parseCsv(text){
+  const rows = []; let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){ if (text[i+1] === '"'){ field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else if (c === '"'){ inQuotes = true; }
+    else if (c === ','){ row.push(field); field = ''; }
+    else if (c === '\r'){ /* skip */ }
+    else if (c === '\n'){ row.push(field); field = ''; rows.push(row); row = []; }
+    else field += c;
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+async function fetchRows(gid){
+  const res = await fetch(gvizCsvUrl(gid), { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Sheet fetch failed (${res.status})`);
+  return parseCsv(await res.text());
+}
+
+const MATCH_COLS = { matchId:1, category:2, stage:3, round:4, slot:5, start:6, court:8, teamA:9, teamB:10 };
+
+async function loadMatches(){
+  const rows = await fetchRows(GID_MATCHES);
+  const headerIdx = rows.findIndex((r) => r[MATCH_COLS.matchId] === 'Match ID');
+  if (headerIdx === -1) throw new Error('Không tìm thấy header "Match ID" trong Sheet');
+  const matches = [];
+  for (let i = headerIdx + 1; i < rows.length; i++){
+    const r = rows[i];
+    const matchId = (r[MATCH_COLS.matchId] || '').trim();
+    if (!matchId) continue;
+    matches.push({
+      matchId,
+      category: (r[MATCH_COLS.category] || '').trim(),
+      stage: (r[MATCH_COLS.stage] || '').trim(),
+      round: (r[MATCH_COLS.round] || '').trim(),
+      slot: (r[MATCH_COLS.slot] || '').trim(),
+      start: (r[MATCH_COLS.start] || '').trim(),
+      court: (r[MATCH_COLS.court] || '').trim(),
+      teamA: (r[MATCH_COLS.teamA] || '').trim(),
+      teamB: (r[MATCH_COLS.teamB] || '').trim(),
+    });
+  }
+  return matches;
+}
+
+async function loadNameMap(){
+  const rows = await fetchRows(GID_STANDINGS);
+  const map = {};
+  let inSection = false;
+  for (const r of rows){
+    const first = (r[0] || '').trim();
+    if (first.startsWith('BẢNG XẾP HẠNG')){ inSection = true; continue; }
+    if (!inSection) continue;
+    const code = first, players = (r[1] || '').trim();
+    if (!code || code === 'Mã') continue;
+    map[code] = players;
+  }
+  return map;
+}
+
+function groupByRound(matches, category){
+  const inCat = matches.filter((m) => m.category === category && m.stage === 'Vòng loại');
+  const rounds = {};
+  inCat.forEach((m) => { (rounds[m.round] ||= []).push(m); });
+  return Object.keys(rounds).sort((a, b) => Number(a) - Number(b))
+    .map((r) => rounds[r].sort((a, b) => Number(a.slot) - Number(b.slot)));
+}
+
+function renderRounds(elId, rounds, nameMap){
+  document.getElementById(elId).innerHTML = rounds.map((round, i) => `
+    <div class="round">
+      <h3>Vòng ${i+1}</h3>
+      <div class="round__list">
+        ${round.map((m) => `
+          <div class="match">
+            <div class="match__meta">
+              <span class="match__tag">${m.matchId}${m.start ? ` · ${m.start}` : ''}</span>
+              ${m.court ? `<span class="match__court">Sân ${m.court}</span>` : ''}
+            </div>
+            ${[m.teamA, m.teamB].map((code) => `
+              <div class="match__team">
+                <span class="match__code">${code || '–'}</span>
+                <span class="match__name" contenteditable="true">${code ? (nameMap[code] || '') : 'Chờ bốc thăm'}</span>
+                <span class="match__score" contenteditable="true"></span>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function renderStandings(elId, codes, nameMap){
+  const head = `<tr>
+    <th class="col-name">VĐV</th>
+    <th class="col-num">Trận</th><th class="col-num">Thắng</th><th class="col-num">Thua</th>
+    <th class="col-num">Điểm</th><th class="col-num">Hiệu số</th>
+  </tr>`;
+  const rows = codes.map(() => `
+    <tr>
+      <td class="col-name blank" contenteditable="true"></td>
+      <td class="col-num blank" contenteditable="true"></td>
+      <td class="col-num blank" contenteditable="true"></td>
+      <td class="col-num blank" contenteditable="true"></td>
+      <td class="col-num blank" contenteditable="true"></td>
+      <td class="col-num blank" contenteditable="true"></td>
+    </tr>`).join('');
+  document.getElementById(elId).innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+}
+
+function bracket(title, sub, prefix){
+  const semi = (label, hi, lo) => `
+    <div class="bcard">
+      <span class="bcard__label">${label}</span>
+      <div class="bline"><span contenteditable="true">Hạng ${hi} — ${prefix}</span><span class="match__score" contenteditable="true"></span></div>
+      <div class="bline"><span contenteditable="true">Hạng ${lo} — ${prefix}</span><span class="match__score" contenteditable="true"></span></div>
+    </div>`;
+  return `
+    <section class="bracket court-texture">
+      <div class="bracket__head"><h2>${title}</h2><span>${sub}</span></div>
+      <div class="bracket__tree">
+        <div class="semi">
+          ${semi('Bán kết 1', 1, 4)}
+          ${semi('Bán kết 2', 2, 3)}
+        </div>
+        <div class="bcard">
+          <span class="bcard__label">Chung kết</span>
+          <div class="bline"><span contenteditable="true">Thắng Bán kết 1</span><span class="match__score" contenteditable="true"></span></div>
+          <div class="bline"><span contenteditable="true">Thắng Bán kết 2</span><span class="match__score" contenteditable="true"></span></div>
+        </div>
+      </div>
+      <div class="bracket__note">Hai đội thua bán kết đồng hạng Ba — không đấu tranh hạng Ba</div>
+    </section>`;
+}
+
+document.getElementById('brackets').innerHTML =
+  bracket('Vòng trong — Đôi Hỗn Hợp', 'Bán kết → Chung kết', 'HH') +
+  bracket('Vòng trong — Đôi Nam Open', 'Bán kết → Chung kết', 'NA');
+
+const FALLBACK_CODES = {
+  hh: ['HH1','HH2','HH3','HH4','HH5','HH6','HH7','HH8','HH9','HH10','HH11','HH12'],
+  na: ['NA1','NA2','NA3','NA4','NA5','NA6','NA7','NA8'],
+};
+
+async function syncFromSheet(){
+  const statusEl = document.getElementById('syncStatus');
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  statusEl.textContent = 'Đang tải dữ liệu từ Google Sheet…';
+  try{
+    const [matches, nameMap] = await Promise.all([loadMatches(), loadNameMap()]);
+    renderRounds('hh-rounds', groupByRound(matches, CATS.hh), nameMap);
+    renderRounds('na-rounds', groupByRound(matches, CATS.na), nameMap);
+    const knockoutSub = (category) => {
+      const sf = matches.find((m) => m.category === category && m.stage === 'Bán kết');
+      const fi = matches.find((m) => m.category === category && m.stage === 'Chung kết');
+      return `Bán kết${sf?.start ? ` ${sf.start}` : ''} → Chung kết${fi?.start ? ` ${fi.start}` : ''}`;
+    };
+    document.getElementById('brackets').innerHTML =
+      bracket('Vòng trong — Đôi Hỗn Hợp', knockoutSub(CATS.hh), 'HH') +
+      bracket('Vòng trong — Đôi Nam Open', knockoutSub(CATS.na), 'NA');
+    const hhCodes = Object.keys(nameMap).filter((c) => c.startsWith('HH')).sort((a,b) => Number(a.slice(2)) - Number(b.slice(2)));
+    const naCodes = Object.keys(nameMap).filter((c) => c.startsWith('NA')).sort((a,b) => Number(a.slice(2)) - Number(b.slice(2)));
+    renderStandings('hh-standings', hhCodes.length ? hhCodes : FALLBACK_CODES.hh, nameMap);
+    renderStandings('na-standings', naCodes.length ? naCodes : FALLBACK_CODES.na, nameMap);
+    statusEl.textContent = `Đã đồng bộ lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+  } catch (err) {
+    console.error(err);
+    const errMsg = '<div style="grid-column:1/-1;padding:8mm;font-family:var(--font-body);font-weight:700;color:var(--navy-deep);">Không tải được dữ liệu từ Google Sheet. Kiểm tra kết nối mạng rồi bấm "Tải dữ liệu Sheet".</div>';
+    document.getElementById('hh-rounds').innerHTML = errMsg;
+    document.getElementById('na-rounds').innerHTML = errMsg;
+    renderStandings('hh-standings', FALLBACK_CODES.hh, {});
+    renderStandings('na-standings', FALLBACK_CODES.na, {});
+    statusEl.textContent = 'Lỗi tải Sheet — kiểm tra kết nối mạng rồi bấm "Tải dữ liệu Sheet" lại.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('syncBtn').addEventListener('click', syncFromSheet);
+syncFromSheet();
+
+/* ---------------- paper size + fit-to-viewport preview ---------------- */
+const SIZE_MM = { a0: [1189, 841], a1: [841, 594] };
+function setSize(size){
+  document.documentElement.dataset.size = size;
+  document.getElementById('page-size-style').textContent =
+    `@page{ size:${size === 'a1' ? 'A1' : 'A0'} landscape; margin:0; }`;
+  document.querySelectorAll('[data-size-btn]').forEach((b) =>
+    b.setAttribute('aria-pressed', String(b.dataset.sizeBtn === size)));
+  fitToViewport();
+}
+function fitToViewport(){
+  const size = document.documentElement.dataset.size;
+  const [wmm, hmm] = SIZE_MM[size];
+  const mmToPx = 96 / 25.4;
+  const wpx = wmm * mmToPx, hpx = hmm * mmToPx;
+  const avail = { w: window.innerWidth - 48, h: window.innerHeight - 150 };
+  const scale = Math.min(avail.w / wpx, avail.h / hpx, 1);
+  const el = document.querySelector('.fit');
+  el.style.transform = `scale(${scale})`;
+  el.style.marginBottom = `${-(hpx * (1 - scale))}px`;
+}
+document.querySelectorAll('[data-size-btn]').forEach((btn) =>
+  btn.addEventListener('click', () => setSize(btn.dataset.sizeBtn)));
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+window.addEventListener('resize', fitToViewport);
+setSize('a0');
+</script>
+</body>
+</html>
