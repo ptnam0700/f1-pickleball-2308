@@ -306,8 +306,11 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
      never have to unlock the phone's rotation lock — and letting the OS rotate costs
      the browser chrome's height, which landscape can least afford. So when the device
      reports portrait we rotate the surface 90deg ourselves, swapping width/height, and
-     the referee simply turns the phone. In real landscape we leave it alone. */
-  @media (orientation: portrait){
+     the referee simply turns the phone. In real landscape we leave it alone.
+     `pointer: coarse` plus `hover: none` keeps this on touch devices only — a narrow
+     desktop window (an OBS browser dock, say) also reports portrait, but nobody there
+     can turn the screen, so rotating it would just lay the board on its side. */
+  @media (orientation: portrait) and (pointer: coarse) and (hover: none){
     body.referee-page[data-screen="play"],
     body.referee-page[data-screen="position"]{ overflow: hidden; }
 

@@ -60,7 +60,7 @@ composites it straight over the court feed.
   body[data-live="true"] .stage{ opacity: 1; }
   body:not([data-live="true"]) .stage{ transform: scale(var(--scale)) translateY(14px); }
 
-  /* ---------------------------------------------------------------- meta row */
+  /* ------------------------------------------------------------- title + chips */
   .meta{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .chip{
     font-family: var(--font-body); font-weight: 800;
@@ -69,9 +69,29 @@ composites it straight over the court feed.
     background: var(--navy-deep); color: var(--ink-on-navy);
     box-shadow: 0 6px 18px -8px rgba(8, 42, 68, 0.9);
   }
-  .chip--court{ background: var(--lime); color: var(--navy-ink); }
+  /* the event name is a constant, so it sits in the quiet lime plate and the
+     match-specific facts get the moving parts below it */
+  .chip--event{
+    background: var(--lime); color: var(--navy-ink);
+    font-family: var(--font-name); font-weight: 700;
+    font-size: 13px; letter-spacing: 0.08em; padding: 5px 13px;
+  }
   .chip--timer{ background: #FF5A5F; color: var(--white); }
   .chip[hidden]{ display: none; }
+
+  /* court · category · round · format, one quiet line rather than four chips
+     competing with the names underneath */
+  .info{
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0 7px;
+    border-bottom: 1px solid rgba(207, 231, 250, 0.18);
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--ink-on-navy);
+    white-space: nowrap; overflow: hidden;
+  }
+  .info__court{ color: var(--lime); }
+  .info__sep{ opacity: 0.4; }
+  .info span[hidden]{ display: none; }
 
   /* ---------------------------------------------------------------- card */
   .card{
@@ -138,13 +158,21 @@ composites it straight over the court feed.
 
 <div class="stage">
   <div class="meta">
-    <span class="chip chip--court" id="chipCourt" hidden>Sân —</span>
-    <span class="chip" id="chipCategory" hidden>—</span>
-    <span class="chip" id="chipFormat" hidden>—</span>
+    <span class="chip chip--event">Pickleball F1 Club Open 2026</span>
     <span class="chip chip--timer" id="chipTimer" hidden>Timeout 1:00</span>
   </div>
 
   <div class="card">
+    <div class="info">
+      <span class="info__court" id="infoCourt" hidden>Sân —</span>
+      <span class="info__sep" data-sep-for="infoCourt" hidden>·</span>
+      <span id="infoCategory" hidden>—</span>
+      <span class="info__sep" data-sep-for="infoCategory" hidden>·</span>
+      <span id="infoStage" hidden>—</span>
+      <span class="info__sep" data-sep-for="infoStage" hidden>·</span>
+      <span id="infoFormat">—</span>
+    </div>
+
     <div class="row" id="rowTop" data-lead="true" data-winner="false">
       <span class="row__name" id="nameTop">—</span>
       <span class="row__dots" id="dotsTop"></span>
@@ -171,8 +199,8 @@ composites it straight over the court feed.
   const body = document.body;
 
   const el = {
-    court: $('chipCourt'), category: $('chipCategory'),
-    format: $('chipFormat'), timer: $('chipTimer'),
+    court: $('infoCourt'), category: $('infoCategory'),
+    stage: $('infoStage'), format: $('infoFormat'), timer: $('chipTimer'),
     rowTop: $('rowTop'), rowBottom: $('rowBottom'),
     nameTop: $('nameTop'), nameBottom: $('nameBottom'),
     dotsTop: $('dotsTop'), dotsBottom: $('dotsBottom'),
@@ -185,9 +213,14 @@ composites it straight over the court feed.
   const scale = parseFloat(params.get('scale'));
   if (scale > 0) document.documentElement.style.setProperty('--scale', String(scale));
 
+  // a hidden field must take its trailing separator with it, or the info line
+  // ends up reading "Sân 3 · · Đến 11"
   function chip(node, text){
-    if (text){ node.textContent = text; node.hidden = false; }
-    else { node.hidden = true; }
+    const shown = !!text;
+    if (shown) node.textContent = text;
+    node.hidden = !shown;
+    const sep = node.id ? document.querySelector(`[data-sep-for="${node.id}"]`) : null;
+    if (sep) sep.hidden = !shown;
   }
 
   function mmss(seconds){
@@ -258,6 +291,7 @@ composites it straight over the court feed.
     const m = data.match;
     chip(el.court, m && m.court ? `Sân ${m.court}` : '');
     chip(el.category, m && m.category ? m.category : '');
+    chip(el.stage, m && m.stage ? m.stage : '');
     chip(el.format, `Đến ${data.target}${data.goldenPoint ? ' · GP' : ' · cách 2'}`);
     chip(el.timer, data.timer ? `${data.timer.label} ${mmss(data.timer.remaining)}` : '');
 
