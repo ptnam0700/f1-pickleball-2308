@@ -141,6 +141,8 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   }
   .ref-teamrow input:focus{ outline: none; border-color: var(--sky); }
   .ref-teamrow__vs{ font-family: var(--font-display); color: var(--sky-deep); font-size: 0.95rem; }
+  .ref-teamrow--pair{ grid-template-columns: 1fr 1fr; }
+  .ref-teamrow input::placeholder{ color: #9BB6C7; font-weight: 700; }
 
   .ref-targets{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .ref-targets button{
@@ -265,25 +267,22 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
     min-height: 220px;
   }
   #positionScreen .ref-toss__inner{ max-width: 720px; }
-  @media (orientation: landscape) and (max-height: 620px){
+  @media (orientation: landscape) and (max-height: 620px), (orientation: portrait) and (max-width: 620px){
     #positionScreen .ref-toss__hero{ padding-top: var(--space-2); padding-bottom: var(--space-3); }
     #positionScreen .ref-toss__title{ font-size: 1.3rem; }
     #positionScreen .ref-toss__lede{ display: none; }
     #positionScreen .ref-toss__inner{ padding-top: var(--space-3); }
     .ref-position__columns{ min-height: 150px; margin-bottom: var(--space-3); }
-    .ref-position__columns .ref-court__cell--pos{ padding-top: var(--space-4); font-size: 0.8rem; }
-    .ref-position__avatar{ width: 28px; height: 28px; font-size: 0.72rem; }
+    .ref-position__columns .ref-court__cell--pos{ padding: var(--space-3); font-size: 0.8rem; }
     .ref-position__swapbtn{ min-height: 44px; }
   }
   /* the play screen's named grid-areas don't apply here — this grid is a plain 3-column strip */
   .ref-position__columns > *{ grid-area: auto !important; }
   .ref-position__columns .ref-court__cell--pos{
-    flex-direction: column; gap: 6px; cursor: default; padding-top: var(--space-6);
+    cursor: default; padding: var(--space-5) var(--space-3);
   }
-  .ref-position__avatar{
-    width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.22); color: var(--white);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 0.85rem; flex-shrink: 0;
+  .ref-position__columns .ref-court__player{
+    font-family: var(--font-body); font-weight: 800; font-size: clamp(0.95rem, 3vh, 1.35rem);
   }
   .ref-position__swaprow{
     appearance: none; border: none; cursor: pointer;
@@ -303,41 +302,45 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   }
   .ref-play__stage{ display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; }
 
-  /* rotate-to-landscape gate: the scoreboard is built for landscape, portrait
-     shows a prompt instead of a cramped stacked layout. */
-  .ref-rotate-prompt{
-    display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-    flex: 1; gap: var(--space-3); padding: var(--space-7) var(--space-6); color: var(--white);
-  }
-  .ref-rotate-prompt svg{ color: var(--lime); animation: rotateHint 1.8s ease-in-out infinite; }
-  @keyframes rotateHint{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-90deg); } }
-  .ref-rotate-prompt__title{ font-family: var(--font-display); font-size: 1.5rem; color: var(--white); }
-  .ref-rotate-prompt__sub{ font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; color: rgba(255,255,255,0.75); max-width: 32ch; }
+  /* Landscape-in-portrait: the board is a landscape layout, but the referee should
+     never have to unlock the phone's rotation lock — and letting the OS rotate costs
+     the browser chrome's height, which landscape can least afford. So when the device
+     reports portrait we rotate the surface 90deg ourselves, swapping width/height, and
+     the referee simply turns the phone. In real landscape we leave it alone. */
   @media (orientation: portrait){
-    .ref-rotate-prompt{ display: flex; }
-    .ref-play__stage{ display: none; }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .ref-rotate-prompt svg{ animation: none; }
+    body.referee-page[data-screen="play"],
+    body.referee-page[data-screen="position"]{ overflow: hidden; }
+
+    #playScreen, #positionScreen{
+      position: fixed; top: 50%; left: 50%;
+      width: 100dvh; height: 100dvw;
+      transform: translate(-50%, -50%) rotate(90deg);
+      transform-origin: center center;
+      padding: 0; margin: 0;
+      /* the rotated frame is the viewport now — children must size to it, not to dvh */
+      min-height: 0; max-height: none; overflow: hidden;
+    }
+    #positionScreen{ overflow-y: auto; }
+    #playScreen .ref-play__stage{ height: 100%; }
+    /* position screen sizes to the rotated frame, and its CTA docks inside it */
+    #positionScreen.ref-toss{ min-height: 0; padding-bottom: 78px; }
+    #positionScreen .ref-sticky-cta{ position: absolute; }
   }
 
   /* the explicit 3-button score bar — mirrors a courtside referee scoreboard:
-     point for the left team, side-out, point for the right team. Landscape only. */
-  .ref-scorebar{ display: none; }
-  @media (orientation: landscape){
-    .ref-scorebar{ display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); padding: 0 var(--space-4); flex-shrink: 0; }
-    .ref-scorebar button{
-      appearance: none; border: none; border-radius: var(--radius-m); cursor: pointer;
-      font-family: var(--font-body); font-weight: 800; font-size: 0.95rem; min-height: 56px;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      background: var(--white); color: var(--navy); box-shadow: var(--shadow-pop); transition: transform .1s, opacity .15s;
-    }
-    .ref-scorebar button:active{ transform: scale(0.97); }
-    .ref-scorebar button:disabled{ opacity: 0.35; pointer-events: none; }
-    #scoreLeftBtn[data-serving="true"], #scoreRightBtn[data-serving="true"]{ background: var(--lime); }
-    #sideOutBtn{ background: var(--navy); color: var(--white); padding: 0 var(--space-4); }
-    #sideOutBtn[data-mode="sideout"]{ background: var(--danger); }
+     point for the left team, side-out, point for the right team. */
+  .ref-scorebar{ display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); padding: 0 var(--space-4); flex-shrink: 0; }
+  .ref-scorebar button{
+    appearance: none; border: none; border-radius: var(--radius-m); cursor: pointer;
+    font-family: var(--font-body); font-weight: 800; font-size: 0.95rem; min-height: 56px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--white); color: var(--navy); box-shadow: var(--shadow-pop); transition: transform .1s, opacity .15s;
   }
+  .ref-scorebar button:active{ transform: scale(0.97); }
+  .ref-scorebar button:disabled{ opacity: 0.35; pointer-events: none; }
+  #scoreLeftBtn[data-serving="true"], #scoreRightBtn[data-serving="true"]{ background: var(--lime); }
+  #sideOutBtn{ background: var(--navy); color: var(--white); padding: 0 var(--space-4); }
+  #sideOutBtn[data-mode="sideout"]{ background: var(--danger); }
 
   /* control strip above the court — exit, format, swap sides, undo */
   .ref-play__head{
@@ -556,7 +559,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   .win-overlay__actions{ display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-5); }
   .win-overlay__actions .btn{ flex: 1 1 auto; min-width: 140px; }
 
-  @media (orientation: landscape) and (max-height: 560px){
+  @media (orientation: landscape) and (max-height: 560px), (orientation: portrait) and (max-width: 560px){
     .win-sheet__head{ margin-bottom: var(--space-3); }
     .win-sheet__meta{ margin-top: var(--space-3); }
     .win-sheet__notice{ margin-top: var(--space-3); padding: var(--space-2) var(--space-3); font-size: 0.8rem; }
@@ -592,7 +595,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
 
   /* phone in landscape: short viewport, wide — shrink the chrome so both
      boards and the center call stay huge, matching a real courtside scoreboard. */
-  @media (orientation: landscape) and (max-height: 560px){
+  @media (orientation: landscape) and (max-height: 560px), (orientation: portrait) and (max-width: 560px){
     .ref-play__bar{ padding: var(--space-2) var(--space-3); }
     .ref-iconbtn{ width: 38px; height: 38px; }
     .ref-iconbtn--labelled{ width: auto; height: 34px; padding: 0 var(--space-2); font-size: 0.72rem; }
@@ -687,11 +690,17 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
       <!-- manual mode -->
       <div class="ref-mode" id="modeManual">
         <div class="ref-card">
-          <span class="ref-card__label">Hai đội</span>
-          <div class="ref-teamrow">
-            <input id="manualNameA" type="text" value="Đội A" maxlength="20" aria-label="Tên đội A" />
-            <span class="ref-teamrow__vs">VS</span>
-            <input id="manualNameB" type="text" value="Đội B" maxlength="20" aria-label="Tên đội B" />
+          <span class="ref-card__label">Đội A — hai vận động viên</span>
+          <div class="ref-teamrow ref-teamrow--pair">
+            <input id="manualA1" type="text" placeholder="VĐV 1" maxlength="20" aria-label="Đội A — VĐV 1" />
+            <input id="manualA2" type="text" placeholder="VĐV 2" maxlength="20" aria-label="Đội A — VĐV 2" />
+          </div>
+        </div>
+        <div class="ref-card">
+          <span class="ref-card__label">Đội B — hai vận động viên</span>
+          <div class="ref-teamrow ref-teamrow--pair">
+            <input id="manualB1" type="text" placeholder="VĐV 1" maxlength="20" aria-label="Đội B — VĐV 1" />
+            <input id="manualB2" type="text" placeholder="VĐV 2" maxlength="20" aria-label="Đội B — VĐV 2" />
           </div>
         </div>
         <div class="ref-card">
@@ -801,12 +810,6 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
 
   <!-- ============================================================ 3. PLAY ============================================================ -->
   <section class="ref-screen ref-play" id="playScreen">
-    <div class="ref-rotate-prompt">
-      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="18" rx="2" transform="rotate(-90 10 16)"/><path d="M19 9a5 5 0 0 1 0 6M22 6a9 9 0 0 1 0 12"/></svg>
-      <p class="ref-rotate-prompt__title">Xoay ngang điện thoại</p>
-      <p class="ref-rotate-prompt__sub">Bảng bắt điểm được thiết kế cho màn hình ngang — giống bảng của trọng tài chuyên nghiệp.</p>
-    </div>
-
     <div class="ref-play__stage">
     <div class="ref-play__head">
       <div class="ref-play__bar">
@@ -962,6 +965,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
 
 <script src="js/nav.js"></script>
 <script src="js/sheet-data.js"></script>
+<script src="js/obs-bridge.js"></script>
 <script>
 (function(){
   const $ = (id) => document.getElementById(id);
@@ -970,6 +974,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   function setScreen(name){
     body.dataset.screen = name;
     window.scrollTo(0, 0);
+    pushOBS(); // overlay follows the referee out of the match screen
   }
 
   /* ================================================================ 1. SELECT SCREEN ================================================================ */
@@ -980,8 +985,11 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   const courtChips = $('courtChips');
   const sheetStatus = $('sheetStatus');
   const matchList = $('matchList');
-  const manualNameA = $('manualNameA');
-  const manualNameB = $('manualNameB');
+  const manualA1 = $('manualA1');
+  const manualA2 = $('manualA2');
+  const manualB1 = $('manualB1');
+  const manualB2 = $('manualB2');
+  const manualInputs = [manualA1, manualA2, manualB1, manualB2];
   const manualTarget11 = $('manualTarget11');
   const manualTarget15 = $('manualTarget15');
   const selectContinueBtn = $('selectContinueBtn');
@@ -1006,8 +1014,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   }
   manualTarget11.addEventListener('click', () => setManualTarget(11));
   manualTarget15.addEventListener('click', () => setManualTarget(15));
-  manualNameA.addEventListener('input', updateSelectContinue);
-  manualNameB.addEventListener('input', updateSelectContinue);
+  manualInputs.forEach((el) => el.addEventListener('input', updateSelectContinue));
 
   const goldenPointToggle = $('goldenPointToggle');
   let goldenPoint = true;
@@ -1129,7 +1136,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
 
   function updateSelectContinue(){
     if (mode === 'manual'){
-      const ok = manualNameA.value.trim().length > 0 && manualNameB.value.trim().length > 0;
+      const ok = manualInputs.every((el) => el.value.trim().length > 0);
       selectContinueBtn.disabled = !ok;
     } else {
       selectContinueBtn.disabled = !selectedMatch;
@@ -1156,8 +1163,8 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   selectContinueBtn.addEventListener('click', () => {
     if (mode === 'manual'){
       flowData = {
-        teamA: { code: manualNameA.value.trim() || 'Đội A', players: [manualNameA.value.trim() || 'Đội A'] },
-        teamB: { code: manualNameB.value.trim() || 'Đội B', players: [manualNameB.value.trim() || 'Đội B'] },
+        teamA: { code: 'Đội A', players: [manualA1.value.trim(), manualA2.value.trim()] },
+        teamB: { code: 'Đội B', players: [manualB1.value.trim(), manualB2.value.trim()] },
         target: manualTarget,
         goldenPoint,
       };
@@ -1270,18 +1277,10 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   let posPlayersB = [];
   let swapped = false; // left/right screen order — also drives the play-screen board order
 
-  function initials(name){
-    const words = (name || '').trim().split(/\s+/).filter(Boolean);
-    if (!words.length) return '?';
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-  }
-
   function positionHalfHtml(team, players, key, side){
     const cells = players.map((name, i) => `
       <div class="ref-court__cell ref-court__cell--pos" data-pos-team="${key}" data-pos-index="${i}">
-        <span class="ref-position__avatar">${initials(name)}</span>
-        <span>${name}</span>
+        <span class="ref-court__player">${name}</span>
       </div>`).join('');
     const swapBtnHtml = players.length === 2
       ? `<button type="button" class="ref-position__swaprow" data-swap-team="${key}" title="Đổi vị trí trong đội" aria-label="Đổi vị trí trong đội">
@@ -1461,6 +1460,40 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
     if (el) setManualServer(el.dataset.team, Number(el.dataset.index));
   });
 
+  /* ---------------- OBS overlay push ----------------
+     Mirrors whatever the referee is looking at into the OBS Browser Source.
+     Sends the whole match state every time; the overlay is a pure renderer. */
+  let obsTimer = null; // { label, remaining } while a timeout/medical clock runs
+
+  function pushOBS(){
+    if (typeof OBSBridge === 'undefined') return;
+    const live = body.dataset.screen === 'play' && !!state;
+    if (!live){
+      OBSBridge.publish({ live: false });
+      return;
+    }
+    const m = selectedMatch;
+    const servingScore = state.score[state.serving];
+    const receivingScore = state.score[state.serving === 'A' ? 'B' : 'A'];
+    OBSBridge.publish({
+      live: true,
+      swapped,
+      names: state.names,
+      players: { A: [...state.players.A], B: [...state.players.B] },
+      score: { A: state.score.A, B: state.score.B },
+      serving: state.serving,
+      serverIdx: state.serverIdx,
+      serverTurn: state.serverTurn,
+      call: `${servingScore}-${receivingScore}-${state.serverTurn}`,
+      target: state.target,
+      goldenPoint: state.goldenPoint,
+      finished: state.finished,
+      winner: state.finished ? (state.score.A > state.score.B ? 'A' : 'B') : null,
+      match: m ? { id: m.matchId, court: m.court || '', category: m.category || '', stage: m.stage || '' } : null,
+      timer: obsTimer,
+    });
+  }
+
   function render(){
     $('boardNameA').textContent = state.names.A;
     $('boardNameB').textContent = state.names.B;
@@ -1489,6 +1522,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
     // tay 1 đang giao → nút chuyển tay 2 (cùng đội); tay 2 → nút side out (đổi đội)
     sideOutBtn.textContent = state.serverTurn === 1 ? 'Chuyển tay 2' : 'Side Out';
     sideOutBtn.dataset.mode = state.serverTurn === 1 ? 'switch' : 'sideout';
+    pushOBS();
   }
 
   function checkWin(){
@@ -1537,6 +1571,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
     agreed = { A: false, B: false };
     syncAgree();
     winOverlay.hidden = false;
+    pushOBS();
   }
 
   function syncAgree(){
@@ -1606,6 +1641,7 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   function startMatch(){
     state = newState();
     history = [];
+    obsTimer = null;
     undoBtn.disabled = true;
     winOverlay.hidden = true;
     digitsA.textContent = digitsB.textContent = '-';
@@ -1638,6 +1674,8 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
       const m = Math.floor(remaining / 60);
       const s = remaining % 60;
       timerValue.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      obsTimer = { label, remaining };
+      pushOBS();
     };
     paint();
     timerOverlay.hidden = false;
@@ -1659,6 +1697,8 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   timerDoneBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
     timerOverlay.hidden = true;
+    obsTimer = null;
+    pushOBS();
   });
 
   /* ---------------- init ---------------- */

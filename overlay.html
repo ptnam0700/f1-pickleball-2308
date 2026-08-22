@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Overlay OBS — Pickleball F1 Club Open 2026</title>
+<meta name="description" content="Lower-third scoreboard overlay for OBS, driven live by referee.html through the shared OBS browser profile." />
+<!--
+THESIS: The stream's scoreboard is the referee's scoreboard — the same state,
+one frame later, with nothing on screen that the viewer cannot use.
+FORM: PPA-style stacked broadcast card — one row per team, name left, serve dots,
+score in a lime chip. Sky/navy/lime from the poster; transparent background so OBS
+composites it straight over the court feed.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --sky:       #008BDC;
+    --sky-deep:  #0072B8;
+    --navy:      #0D3D61;
+    --navy-deep: #082B4B;
+    --navy-ink:  #082A44;
+    --lime:      #D3FF34;
+    --lime-deep: #B8E01C;
+    --white:     #FFFFFF;
+    --ink-on-navy: #CFE7FA;
+
+    /* Anton carries the brand but ships no Vietnamese glyphs — it drops the
+       diacritics on names like "ĐỘI SẤM SÉT". Oswald is the same condensed
+       register and does have them, so all Vietnamese text uses it and Anton is
+       kept for digits, which have no diacritics to lose. */
+    --font-display: 'Anton', 'Archivo Black', sans-serif;
+    --font-name: 'Oswald', 'Anton', sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+
+    /* single knob for stream sizing — raise for 4K canvases, lower for 720p */
+    --scale: 1;
+  }
+
+  *{ box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body{
+    width: 100%; height: 100%;
+    background: transparent;   /* OBS composites over the camera feed */
+    font-family: var(--font-body);
+    overflow: hidden;
+  }
+
+  /* bottom-left anchor: the usual safe corner on a court camera framing */
+  .stage{
+    position: absolute;
+    left: calc(48px * var(--scale));
+    bottom: calc(48px * var(--scale));
+    transform-origin: left bottom;
+    transform: scale(var(--scale));
+    opacity: 0;
+    transition: opacity 240ms ease, transform 240ms ease;
+  }
+  body[data-live="true"] .stage{ opacity: 1; }
+  body:not([data-live="true"]) .stage{ transform: scale(var(--scale)) translateY(14px); }
+
+  /* ---------------------------------------------------------------- meta row */
+  .meta{ display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .chip{
+    font-family: var(--font-body); font-weight: 800;
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 11px; border-radius: 999px;
+    background: var(--navy-deep); color: var(--ink-on-navy);
+    box-shadow: 0 6px 18px -8px rgba(8, 42, 68, 0.9);
+  }
+  .chip--court{ background: var(--lime); color: var(--navy-ink); }
+  .chip--timer{ background: #FF5A5F; color: var(--white); }
+  .chip[hidden]{ display: none; }
+
+  /* ---------------------------------------------------------------- card */
+  .card{
+    width: 620px;
+    background: linear-gradient(180deg, #12496F 0%, #0A3252 100%);
+    border: 2px solid rgba(207, 231, 250, 0.5);
+    border-radius: 16px;
+    padding: 6px 14px;
+    box-shadow: 0 22px 50px -18px rgba(8, 42, 68, 0.9);
+  }
+
+  .row{
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    height: 54px;
+  }
+  .row + .row{ border-top: 1px solid rgba(207, 231, 250, 0.18); }
+
+  /* one line per team, player names only — the internal team code means nothing
+     to a viewer, so the row carries the names the commentator says */
+  .row__name{
+    font-family: var(--font-name); font-weight: 700;
+    font-size: 23px; line-height: 1.05; letter-spacing: 0.015em;
+    text-transform: uppercase; color: var(--white);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  /* serve dots: one per server (1st or 2nd), only on the serving team */
+  .row__dots{ display: flex; gap: 5px; width: 30px; justify-content: flex-end; }
+  .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--lime); }
+
+  .row__score{
+    font-family: var(--font-display); font-size: 30px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    min-width: 54px; height: 40px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--lime); color: var(--navy-ink);
+  }
+  /* the trailing team's chip stays legible but stops competing with the leader's */
+  .row[data-lead="false"] .row__score{ background: rgba(207, 231, 250, 0.16); color: var(--white); }
+
+  .row[data-winner="true"] .row__name{ color: var(--lime); }
+
+  /* ---------------------------------------------------------------- footer strip */
+  .foot{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-top: 1px solid rgba(207, 231, 250, 0.18);
+    padding: 7px 0 4px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-on-navy);
+  }
+  .foot__call{ color: var(--lime); font-family: var(--font-display); letter-spacing: 0.06em; font-size: 15px; }
+  .foot__result{ color: var(--lime); }
+
+  @media (prefers-reduced-motion: reduce){
+    .stage, .row, .dot{ transition: none; }
+  }
+</style>
+</head>
+<body data-live="false">
+
+<div class="stage">
+  <div class="meta">
+    <span class="chip chip--court" id="chipCourt" hidden>Sân —</span>
+    <span class="chip" id="chipCategory" hidden>—</span>
+    <span class="chip" id="chipFormat" hidden>—</span>
+    <span class="chip chip--timer" id="chipTimer" hidden>Timeout 1:00</span>
+  </div>
+
+  <div class="card">
+    <div class="row" id="rowTop" data-lead="true" data-winner="false">
+      <span class="row__name" id="nameTop">—</span>
+      <span class="row__dots" id="dotsTop"></span>
+      <span class="row__score" id="scoreTop">0</span>
+    </div>
+
+    <div class="row" id="rowBottom" data-lead="true" data-winner="false">
+      <span class="row__name" id="nameBottom">—</span>
+      <span class="row__dots" id="dotsBottom"></span>
+      <span class="row__score" id="scoreBottom">0</span>
+    </div>
+
+    <div class="foot">
+      <span class="foot__label" id="footLabel">Điểm hô</span>
+      <span class="foot__call" id="footCall">0-0-2</span>
+    </div>
+  </div>
+</div>
+
+<script src="js/obs-bridge.js"></script>
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const body = document.body;
+
+  const el = {
+    court: $('chipCourt'), category: $('chipCategory'),
+    format: $('chipFormat'), timer: $('chipTimer'),
+    rowTop: $('rowTop'), rowBottom: $('rowBottom'),
+    nameTop: $('nameTop'), nameBottom: $('nameBottom'),
+    dotsTop: $('dotsTop'), dotsBottom: $('dotsBottom'),
+    scoreTop: $('scoreTop'), scoreBottom: $('scoreBottom'),
+    footLabel: $('footLabel'), footCall: $('footCall'),
+  };
+
+  // ?scale=1.4 lets the operator size the overlay without touching the CSS
+  const params = new URLSearchParams(location.search);
+  const scale = parseFloat(params.get('scale'));
+  if (scale > 0) document.documentElement.style.setProperty('--scale', String(scale));
+
+  function chip(node, text){
+    if (text){ node.textContent = text; node.hidden = false; }
+    else { node.hidden = true; }
+  }
+
+  function mmss(seconds){
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  // longest joined label the 620px card holds at 23px before it ellipsises
+  const MAX_LABEL = 34;
+
+  // "Nguyễn Văn Hùng" → "N. V. Hùng" — keeps the calling name, which is the part
+  // a commentator and a viewer actually use
+  function abbreviate(name){
+    const parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return name;
+    const given = parts[parts.length - 1];
+    return parts.slice(0, -1).map((p) => p[0] + '.').join(' ') + ' ' + given;
+  }
+
+  // one dot for the first server, two for the second — the same information the
+  // referee calls aloud, without the viewer having to parse the call
+  function dots(node, count){
+    node.innerHTML = '<span class="dot"></span>'.repeat(count);
+  }
+
+  function paint(data){
+    if (!data || !data.live){
+      body.dataset.live = 'false';
+      return;
+    }
+
+    // the referee can swap which team sits on the left; the top row follows,
+    // so the card always reads in the same order as the camera
+    const top    = data.swapped ? 'B' : 'A';
+    const bottom = data.swapped ? 'A' : 'B';
+
+    // player names carry the row; the team code is only a fallback for a manual
+    // match entered without any player names
+    const rosterOf = (team) => (data.players && data.players[team]) || [];
+    const labelOf = (team, short) => {
+      const list = rosterOf(team);
+      if (!list.length) return data.names[team];
+      return list.map(short ? abbreviate : (n) => n).join(' / ');
+    };
+
+    // Full Vietnamese pairs ("Nguyễn Văn Hùng / Trần Thị Mỹ Duyên") overrun the
+    // card, so once either row is too long BOTH rows drop to initials — the two
+    // rows must stay in the same register or the card reads as a mistake.
+    const tooLong = [top, bottom].some((t) => labelOf(t, false).length > MAX_LABEL);
+    el.nameTop.textContent    = labelOf(top, tooLong);
+    el.nameBottom.textContent = labelOf(bottom, tooLong);
+
+    el.scoreTop.textContent    = data.score[top];
+    el.scoreBottom.textContent = data.score[bottom];
+
+    // once the match is finished nobody is serving, so the dots clear
+    dots(el.dotsTop,    !data.finished && data.serving === top    ? data.serverTurn : 0);
+    dots(el.dotsBottom, !data.finished && data.serving === bottom ? data.serverTurn : 0);
+
+    // level scores light both chips rather than picking an arbitrary leader
+    el.rowTop.dataset.lead    = String(data.score[top]    >= data.score[bottom]);
+    el.rowBottom.dataset.lead = String(data.score[bottom] >= data.score[top]);
+
+    el.rowTop.dataset.winner    = String(data.finished && data.winner === top);
+    el.rowBottom.dataset.winner = String(data.finished && data.winner === bottom);
+
+    const m = data.match;
+    chip(el.court, m && m.court ? `Sân ${m.court}` : '');
+    chip(el.category, m && m.category ? m.category : '');
+    chip(el.format, `Đến ${data.target}${data.goldenPoint ? ' · GP' : ' · cách 2'}`);
+    chip(el.timer, data.timer ? `${data.timer.label} ${mmss(data.timer.remaining)}` : '');
+
+    if (data.finished){
+      el.footLabel.textContent = 'Kết thúc';
+      el.footCall.textContent = `${labelOf(data.winner, tooLong)} thắng`;
+      el.footCall.classList.add('foot__result');
+    } else {
+      el.footLabel.textContent = 'Điểm hô';
+      el.footCall.textContent = data.call;
+      el.footCall.classList.remove('foot__result');
+    }
+
+    body.dataset.live = 'true';
+  }
+
+  OBSBridge.subscribe(paint);
+})();
+</script>
+</body>
+</html>
