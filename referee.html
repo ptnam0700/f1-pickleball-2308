@@ -1,0 +1,1670 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bắt trận — Pickleball F1 Club Open 2026</title>
+<meta name="description" content="Công cụ bắt trận cho trọng tài — chọn sân, chọn trận, tung đồng xu và ghi điểm chuẩn pickleball, tối ưu cho điện thoại ngoài sân." />
+<meta name="theme-color" content="#0D3D61" />
+<link rel="stylesheet" href="css/style.css" />
+<!--
+THESIS: The referee doesn't read a scoreboard, they call one aloud — two giant
+mechanical flip-counters ARE the score, no chrome standing between the tap and the call.
+OWN-WORLD: inherits the poster's sky/navy/lime system and Anton/Inter type.
+STORY: pick the court, pick the match, settle who serves first, then score —
+each step is its own full screen so the referee's thumb only ever meets one huge
+decision at a time.
+FIRST VIEWPORT (playing): a slim status bar, the giant call readout, two full-width
+flip-counter boards stacked to fill the screen, timeout/medical chips pinned at the
+bottom — chrome recedes the moment a match starts.
+FORM: split-flap mechanical scoreboard, extended with a court/match picker and an
+inline coin-toss step — dealt lead, rank 3 of 7 on the ordered structural list,
+seed key adc15d89.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
+review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+-->
+<style>
+  /* ---------------------------------------------------------------- page shell */
+  body.referee-page{ min-height: 100dvh; } /* inherits css/style.css body{background:var(--sky)} */
+  body.referee-page[data-screen="toss"] .site-header,
+  body.referee-page[data-screen="position"] .site-header,
+  body.referee-page[data-screen="play"] .site-header{ display: none; }
+  body.referee-page main{ display: block; }
+
+  .ref-hero{ background: var(--navy); color: var(--white); padding: var(--space-7) var(--space-5) var(--space-6); }
+  .ref-hero__inner{ max-width: 640px; margin: 0 auto; }
+
+  .ref-topline{
+    position: sticky; top: 0; z-index: 5;
+    height: 6px;
+    background: repeating-linear-gradient(90deg, var(--lime) 0 22px, transparent 22px 34px);
+  }
+
+  .ref-screen{ display: none; }
+  body.referee-page[data-screen="select"] #selectScreen{ display: block; }
+  body.referee-page[data-screen="toss"] #tossScreen{ display: flex; }
+  body.referee-page[data-screen="position"] #positionScreen{ display: flex; }
+  body.referee-page[data-screen="play"] #playScreen{ display: flex; }
+
+  /* ---------------------------------------------------------------- shared card look */
+  .ref-wrap{ max-width: 640px; margin: 0 auto; padding: var(--space-6) var(--space-5) calc(var(--space-9) + 90px); }
+  .ref-title{ font-size: clamp(1.9rem, 6vw, 2.6rem); color: var(--white); margin-bottom: var(--space-2); }
+  .ref-lede{ color: var(--ink-on-navy); font-size: 1rem; max-width: 48ch; }
+
+  .ref-card{
+    background: var(--white); border-radius: var(--radius-l); box-shadow: var(--shadow-card);
+    padding: var(--space-6) var(--space-5); margin-bottom: var(--space-5);
+  }
+  .ref-card__label{
+    font-family: var(--font-body); font-weight: 800; font-size: 0.78rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--sky-deep); margin-bottom: var(--space-3); display: block;
+  }
+
+  .ref-sticky-cta{
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; pointer-events: none;
+    padding: var(--space-4) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(0,139,220,0) 0%, var(--sky-deep) 55%);
+  }
+  .ref-sticky-cta .btn{
+    width: 100%; max-width: 640px; margin: 0 auto; display: flex; min-height: 68px;
+    align-items: center; justify-content: center; gap: var(--space-2); font-size: 1.1rem;
+    pointer-events: auto;
+  }
+  .ref-sticky-cta .btn:disabled{ opacity: 0.4; pointer-events: none; }
+
+  /* ---------------------------------------------------------------- select screen: mode tabs */
+  .ref-tabs{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); background: var(--white); border-radius: var(--radius-m); padding: 4px; margin: var(--space-6) 0; box-shadow: var(--shadow-pop); }
+  .ref-tabs button{
+    appearance: none; border: none; border-radius: calc(var(--radius-m) - 4px); cursor: pointer;
+    padding: var(--space-3); font-family: var(--font-body); font-weight: 800; font-size: 0.92rem;
+    background: transparent; color: var(--sky-deep); min-height: 52px; transition: background .15s, color .15s;
+  }
+  .ref-tabs button[aria-selected="true"]{ background: var(--navy); color: var(--white); }
+
+  .ref-mode{ display: none; }
+  .ref-mode[data-active="true"]{ display: block; }
+
+  /* court chips */
+  .ref-courts{ display: flex; flex-wrap: wrap; gap: var(--space-3); }
+  .ref-courts button{
+    appearance: none; border: 2px solid #D7E7F1; background: var(--sky-tint); border-radius: var(--radius-m);
+    cursor: pointer; min-width: 84px; min-height: 76px; padding: var(--space-3);
+    font-family: var(--font-display); font-size: 1.6rem; color: var(--navy);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .ref-courts button span{ font-family: var(--font-body); font-weight: 700; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: #4A6B85; }
+  .ref-courts button[aria-pressed="true"]{ background: var(--navy); border-color: var(--navy); color: var(--white); }
+  .ref-courts button[aria-pressed="true"] span{ color: rgba(207,231,250,0.75); }
+  .ref-courts button:active{ transform: scale(0.96); }
+
+  .ref-sheet-status{
+    font-family: var(--font-body); font-weight: 700; font-size: 0.9rem; color: var(--ink-on-navy);
+    text-align: center; padding: var(--space-6) 0;
+  }
+
+  .ref-matches{ display: grid; gap: var(--space-3); margin-top: var(--space-5); }
+  /* .ref-match reuses .match-card's look (css/style.css) and adds tap-to-select behavior */
+  .ref-match{
+    appearance: none; border: 2px solid transparent; cursor: pointer; text-align: left; width: 100%;
+    transition: border-color .15s, box-shadow .15s, transform .15s; display: block;
+  }
+  .ref-match:active{ transform: scale(0.99); }
+  .ref-match{ position: relative; }
+  .ref-match[aria-pressed="true"]{
+    border-color: var(--lime-deep); background: #F7FFC2;
+    box-shadow: 0 0 0 4px rgba(211,255,52,0.55), 0 8px 20px -8px rgba(8,42,68,0.28);
+    transform: translateY(-1px);
+  }
+  .ref-match__check{
+    position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--lime); border: 3px solid var(--navy-deep); color: var(--navy-ink);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.5); transition: opacity .15s, transform .15s; z-index: 2;
+  }
+  .ref-match[aria-pressed="true"] .ref-match__check{ opacity: 1; transform: scale(1); }
+  .ref-match .match-card__head{ justify-content: flex-start; gap: var(--space-2); flex-wrap: wrap; }
+  .ref-match .match-card__badge{ background: var(--sky-tint); color: var(--sky-deep); }
+  .ref-match .match-card__badge--hh{ background: #FFEFD6; color: #A65E00; }
+
+  .ref-empty{
+    font-family: var(--font-body); font-weight: 700; color: #4A6B85; text-align: center;
+    padding: var(--space-6); background: var(--white); border-radius: var(--radius-l); box-shadow: var(--shadow-card);
+  }
+
+  /* manual mode */
+  .ref-teamrow{ display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-3); }
+  .ref-teamrow input{
+    font-family: var(--font-body); font-weight: 800; font-size: 1.15rem; color: var(--navy);
+    background: var(--sky-tint); border: 2px solid transparent; border-radius: var(--radius-m);
+    padding: var(--space-4) var(--space-3); text-align: center; width: 100%; min-width: 0;
+  }
+  .ref-teamrow input:focus{ outline: none; border-color: var(--sky); }
+  .ref-teamrow__vs{ font-family: var(--font-display); color: var(--sky-deep); font-size: 0.95rem; }
+
+  .ref-targets{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .ref-targets button{
+    appearance: none; border: 2px solid #D7E7F1; background: var(--sky-tint); border-radius: var(--radius-m);
+    padding: var(--space-4) var(--space-3); cursor: pointer; text-align: center; min-height: 76px;
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .ref-targets button[aria-pressed="true"]{ background: var(--lime); border-color: var(--lime-deep); }
+  .ref-targets button:active{ transform: scale(0.97); }
+  .ref-targets__num{ font-family: var(--font-display); font-size: 2rem; color: var(--navy); display: block; }
+  .ref-targets__label{ font-family: var(--font-body); font-weight: 700; font-size: 0.78rem; color: #4A6B85; }
+
+  .ref-goldenpoint{
+    appearance: none; border: none; background: var(--sky-tint); border-radius: var(--radius-m);
+    width: 100%; padding: var(--space-4); display: flex; align-items: center; gap: var(--space-3);
+    cursor: pointer; text-align: left; min-height: 68px; transition: background .15s;
+  }
+  .ref-goldenpoint__dot{
+    width: 44px; height: 26px; border-radius: 999px; background: #C7D6E0; flex-shrink: 0; position: relative;
+    transition: background .15s;
+  }
+  .ref-goldenpoint__dot::before{
+    content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform .15s;
+  }
+  .ref-goldenpoint[aria-pressed="true"]{ background: #EFFFCB; }
+  .ref-goldenpoint[aria-pressed="true"] .ref-goldenpoint__dot{ background: var(--lime-deep); }
+  .ref-goldenpoint[aria-pressed="true"] .ref-goldenpoint__dot::before{ transform: translateX(18px); }
+  .ref-goldenpoint__title{ display: block; font-family: var(--font-body); font-weight: 800; font-size: 0.95rem; color: var(--navy); }
+  .ref-goldenpoint__sub{ display: block; font-family: var(--font-body); font-weight: 600; font-size: 0.76rem; color: #4A6B85; margin-top: 2px; }
+
+  /* ---------------------------------------------------------------- toss screen */
+  .ref-toss{
+    flex-direction: column; min-height: 100dvh; width: 100%; align-items: stretch; justify-content: flex-start;
+    padding: 0 0 calc(var(--space-9) + 90px + env(safe-area-inset-bottom));
+  }
+  .ref-toss__hero{
+    background: var(--navy); padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-5) var(--space-6);
+    text-align: center;
+  }
+  .ref-toss__bar{ width: 100%; max-width: 640px; display: flex; align-items: center; margin: 0 auto var(--space-2); }
+  .ref-toss__inner{ width: 100%; max-width: 480px; text-align: center; margin: 0 auto; padding: var(--space-6) var(--space-5) 0; }
+  .ref-toss__title{ font-size: clamp(1.7rem, 6vw, 2.2rem); color: var(--white); margin-bottom: var(--space-2); }
+  .ref-toss__lede{ color: var(--ink-on-navy); font-size: 0.95rem; max-width: 40ch; margin: 0 auto; }
+
+  .ref-toss__names{ display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: var(--space-3); margin-bottom: var(--space-7); }
+  .ref-toss__name{
+    display: flex; flex-direction: column; justify-content: center; gap: 3px;
+    background: var(--white); box-shadow: var(--shadow-pop); border-radius: var(--radius-m); padding: var(--space-4) var(--space-3);
+    overflow-wrap: break-word; text-align: center;
+  }
+  .ref-toss__name-code{
+    font-family: var(--font-display); font-size: clamp(1rem, 4vw, 1.3rem); color: var(--navy); line-height: 1.1;
+  }
+  .ref-toss__name-players{
+    font-family: var(--font-body); font-weight: 600; font-size: 0.78rem; color: var(--sky-deep); line-height: 1.3;
+  }
+  .ref-toss__vs{
+    font-family: var(--font-display); color: var(--white); font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.18);
+    align-self: center;
+  }
+
+  .ref-coin-stage{ perspective: 1200px; display: flex; justify-content: center; margin-bottom: var(--space-6); }
+  .ref-coin{
+    position: relative; width: 150px; height: 150px; transform-style: preserve-3d;
+  }
+  .ref-coin.is-flipping{ animation: refCoinSpin 2.2s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .ref-coin__face{
+    position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    font-family: var(--font-display); text-transform: uppercase; border: 5px solid var(--navy-deep);
+    box-shadow: inset 0 0 0 4px rgba(255,255,255,0.25), var(--shadow-pop);
+  }
+  .ref-coin__face--a{ background: var(--lime); color: var(--navy-ink); }
+  .ref-coin__face--b{ background: var(--sky); color: var(--white); transform: rotateY(180deg); }
+  .ref-coin__label{ font-size: 0.6rem; opacity: 0.75; margin-bottom: 3px; }
+  .ref-coin__name{ font-size: 0.95rem; padding: 0 10px; line-height: 1.1; max-width: 120px; overflow-wrap: break-word; }
+  @keyframes refCoinSpin{
+    0%{ transform: rotateY(0) translateY(0); }
+    50%{ transform: rotateY(1800deg) translateY(-50px); }
+    100%{ transform: rotateY(var(--ref-coin-end, 3600deg)) translateY(0); }
+  }
+
+  .ref-toss__result{
+    min-height: 1.4em; font-family: var(--font-display); font-size: 1.2rem; color: var(--navy);
+    margin-bottom: var(--space-6); background: var(--white); box-shadow: var(--shadow-pop);
+    border-radius: var(--radius-m); padding: var(--space-3) var(--space-4);
+  }
+  .ref-toss__result strong{ color: var(--sky-deep); }
+  .ref-toss__result--empty{
+    color: var(--sky-deep); font-family: var(--font-body); font-weight: 700; font-size: 0.92rem;
+    background: rgba(255,255,255,0.9);
+  }
+
+  .ref-flipbtn{ width: 100%; min-height: 64px; margin-bottom: var(--space-6); }
+
+  .ref-toss__divider{
+    display: flex; align-items: center; gap: var(--space-3); margin: var(--space-2) 0 var(--space-5);
+    font-family: var(--font-body); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: rgba(255,255,255,0.8);
+  }
+  .ref-toss__divider::before, .ref-toss__divider::after{ content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.35); }
+
+  .ref-choice{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .ref-choice button{
+    appearance: none; border: 2px solid transparent; background: var(--white); border-radius: var(--radius-m);
+    padding: var(--space-5) var(--space-3); font-family: var(--font-body); font-weight: 800; font-size: 1rem;
+    color: var(--navy); cursor: pointer; transition: border-color .15s, background .15s, transform .15s;
+    min-height: 64px; box-shadow: var(--shadow-pop);
+  }
+  .ref-choice button[aria-pressed="true"]{ background: var(--lime); border-color: var(--lime-deep); color: var(--navy-ink); }
+  .ref-choice button:active{ transform: scale(0.97); }
+
+  /* ---------------------------------------------------------------- position (court-side) screen
+     Same landscape court layout as the play screen, minus the scores. */
+  .ref-position__columns{
+    display: grid; grid-template-columns: 1fr 6px 1fr; margin-bottom: var(--space-5);
+    background: var(--sky-deep); border: 3px solid rgba(255,255,255,0.85);
+    border-radius: var(--radius-l); box-shadow: var(--shadow-card); overflow: hidden;
+    min-height: 220px;
+  }
+  #positionScreen .ref-toss__inner{ max-width: 720px; }
+  @media (orientation: landscape) and (max-height: 620px){
+    #positionScreen .ref-toss__hero{ padding-top: var(--space-2); padding-bottom: var(--space-3); }
+    #positionScreen .ref-toss__title{ font-size: 1.3rem; }
+    #positionScreen .ref-toss__lede{ display: none; }
+    #positionScreen .ref-toss__inner{ padding-top: var(--space-3); }
+    .ref-position__columns{ min-height: 150px; margin-bottom: var(--space-3); }
+    .ref-position__columns .ref-court__cell--pos{ padding-top: var(--space-4); font-size: 0.8rem; }
+    .ref-position__avatar{ width: 28px; height: 28px; font-size: 0.72rem; }
+    .ref-position__swapbtn{ min-height: 44px; }
+  }
+  /* the play screen's named grid-areas don't apply here — this grid is a plain 3-column strip */
+  .ref-position__columns > *{ grid-area: auto !important; }
+  .ref-position__columns .ref-court__cell--pos{
+    flex-direction: column; gap: 6px; cursor: default; padding-top: var(--space-6);
+  }
+  .ref-position__avatar{
+    width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.22); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 0.85rem; flex-shrink: 0;
+  }
+  .ref-position__swaprow{
+    appearance: none; border: none; cursor: pointer;
+    background: rgba(8,42,68,0.75); color: var(--white);
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%; z-index: 3;
+    display: flex; align-items: center; justify-content: center; transition: background .15s;
+  }
+  .ref-court__half--b .ref-position__swaprow{ right: auto; left: 6px; }
+  .ref-position__swaprow:active{ background: var(--navy-deep); }
+  .ref-position__swapbtn{ width: 100%; min-height: 56px; }
+
+  /* ---------------------------------------------------------------- play screen */
+  .ref-play{
+    flex-direction: column; min-height: 100dvh; width: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .ref-play__stage{ display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; }
+
+  /* rotate-to-landscape gate: the scoreboard is built for landscape, portrait
+     shows a prompt instead of a cramped stacked layout. */
+  .ref-rotate-prompt{
+    display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    flex: 1; gap: var(--space-3); padding: var(--space-7) var(--space-6); color: var(--white);
+  }
+  .ref-rotate-prompt svg{ color: var(--lime); animation: rotateHint 1.8s ease-in-out infinite; }
+  @keyframes rotateHint{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-90deg); } }
+  .ref-rotate-prompt__title{ font-family: var(--font-display); font-size: 1.5rem; color: var(--white); }
+  .ref-rotate-prompt__sub{ font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; color: rgba(255,255,255,0.75); max-width: 32ch; }
+  @media (orientation: portrait){
+    .ref-rotate-prompt{ display: flex; }
+    .ref-play__stage{ display: none; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ref-rotate-prompt svg{ animation: none; }
+  }
+
+  /* the explicit 3-button score bar — mirrors a courtside referee scoreboard:
+     point for the left team, side-out, point for the right team. Landscape only. */
+  .ref-scorebar{ display: none; }
+  @media (orientation: landscape){
+    .ref-scorebar{ display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); padding: 0 var(--space-4); flex-shrink: 0; }
+    .ref-scorebar button{
+      appearance: none; border: none; border-radius: var(--radius-m); cursor: pointer;
+      font-family: var(--font-body); font-weight: 800; font-size: 0.95rem; min-height: 56px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      background: var(--white); color: var(--navy); box-shadow: var(--shadow-pop); transition: transform .1s, opacity .15s;
+    }
+    .ref-scorebar button:active{ transform: scale(0.97); }
+    .ref-scorebar button:disabled{ opacity: 0.35; pointer-events: none; }
+    #scoreLeftBtn[data-serving="true"], #scoreRightBtn[data-serving="true"]{ background: var(--lime); }
+    #sideOutBtn{ background: var(--navy); color: var(--white); padding: 0 var(--space-4); }
+    #sideOutBtn[data-mode="sideout"]{ background: var(--danger); }
+  }
+
+  /* control strip above the court — exit, format, swap sides, undo */
+  .ref-play__head{
+    background: var(--navy); border-radius: var(--radius-m); box-shadow: var(--shadow-pop);
+    margin: var(--space-3) var(--space-4) 0; flex-shrink: 0; overflow: hidden;
+  }
+
+  .ref-play__bar{
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+    padding: var(--space-3) var(--space-4); flex-shrink: 0;
+  }
+  .ref-play__bar-group{ display: flex; align-items: center; gap: var(--space-2); }
+  .ref-iconbtn{
+    appearance: none; border: none; background: rgba(255,255,255,0.1); color: var(--white);
+    border-radius: 999px; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; cursor: pointer; transition: background .15s, transform .15s; flex-shrink: 0;
+  }
+  .ref-iconbtn:active{ transform: scale(0.92); background: rgba(255,255,255,0.2); }
+  .ref-iconbtn:disabled{ opacity: 0.35; cursor: not-allowed; }
+  .ref-iconbtn[aria-pressed="true"]{ background: var(--lime); color: var(--navy-ink); }
+  /* labelled variant: icon + a readable word, so nothing is icon-only guesswork */
+  .ref-iconbtn--labelled{
+    width: auto; height: 40px; border-radius: 999px; gap: 6px; padding: 0 var(--space-3);
+    font-family: var(--font-body); font-weight: 800; font-size: 0.78rem; white-space: nowrap;
+  }
+  .ref-play__format{
+    font-family: var(--font-body); font-weight: 800; font-size: 0.78rem; letter-spacing: 0.06em;
+    color: rgba(207,231,250,0.9); text-transform: uppercase; text-align: center;
+  }
+  .ref-play__format b{ color: var(--lime); font-size: 0.9rem; }
+
+  /* ================================ THE COURT ================================
+     One framed court, drawn from the referee's own sketch: a 2x2 grid of service
+     cells (two per team, stacked), the net line down the middle, each team's score
+     sitting just inside the net line, and the full call ("0-0-2") across the top. */
+  .ref-court{
+    flex: 1; min-height: 0; margin: var(--space-4); position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto 6px auto 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "call call call call call"
+      "halfa scorea net scoreb halfb";
+    background: var(--sky-deep); border: 3px solid rgba(255,255,255,0.85);
+    border-radius: var(--radius-l); box-shadow: var(--shadow-card);
+    overflow: hidden; background-clip: padding-box; isolation: isolate;
+  }
+  .ref-court.is-swapped{
+    grid-template-areas:
+      "call call call call call"
+      "halfb scoreb net scorea halfa";
+  }
+
+  .ref-court__call{
+    grid-area: call; text-align: center; background: var(--navy); color: var(--white);
+    font-family: var(--font-display); font-variant-numeric: tabular-nums; line-height: 1.1;
+    font-size: clamp(1.6rem, 5.5vh, 2.6rem); padding: var(--space-2) var(--space-3);
+    letter-spacing: 0.02em;
+  }
+  .ref-court__call span{ color: var(--lime); }
+
+  .ref-court__net{ grid-area: net; background: rgba(255,255,255,0.85); }
+
+  /* each team's half: two stacked service cells the ref taps to pick the server */
+  .ref-court__half{ min-width: 0; min-height: 0; display: flex; position: relative; overflow: hidden; }
+  .ref-court__team{
+    position: absolute; top: 6px; z-index: 2; pointer-events: none;
+    font-family: var(--font-body); font-weight: 800; font-size: 0.7rem; letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.85); background: rgba(8,42,68,0.55); padding: 2px 8px; border-radius: 999px;
+    max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ref-court__half--a .ref-court__team{ left: 8px; }
+  .ref-court__half--b .ref-court__team{ right: 8px; }
+  .ref-court__half--a{ grid-area: halfa; }
+  .ref-court__half--b{ grid-area: halfb; }
+  .ref-court__cells{ display: flex; flex-direction: column; flex: 1; width: 100%; min-height: 0; }
+  .ref-court__cell{
+    flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: var(--space-2) var(--space-3); cursor: pointer; text-align: center;
+    font-family: var(--font-body); font-weight: 700; color: var(--white);
+    font-size: clamp(0.8rem, 2.6vh, 1.15rem); line-height: 1.2;
+    background: transparent; border: none; transition: background .15s, color .15s;
+    overflow: hidden;
+  }
+  .ref-court__side{
+    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+  .ref-court__player{ max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ref-court__cell + .ref-court__cell{ border-top: 2px solid rgba(255,255,255,0.55); }
+  .ref-court__cell:active{ background: rgba(255,255,255,0.16); }
+  .ref-court__cell[data-active="true"]{ background: var(--lime); color: var(--navy-ink); font-weight: 800; }
+  .ref-court__cell[data-active="true"] .ref-court__side{ color: rgba(8,42,68,0.65); }
+  .ref-court__cell[data-active="true"] .ref-court__player::before{
+    content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--navy-ink); margin-right: 6px; vertical-align: middle;
+  }
+
+  /* score digits flank the net, inside the court, as in the sketch */
+  .ref-court__score{
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); color: var(--lime); font-variant-numeric: tabular-nums;
+    font-size: clamp(2.4rem, 13vh, 6rem); line-height: 1; padding: 0 var(--space-3);
+    text-shadow: 0 4px 18px rgba(0,0,0,0.35); min-width: 1.4em;
+  }
+  .ref-court__score--a{ grid-area: scorea; }
+  .ref-court__score--b{ grid-area: scoreb; }
+  .ref-court__score.is-flipping{ animation: digitFlip 380ms cubic-bezier(.5,0,.5,1); }
+  @keyframes digitFlip{
+    0%{ transform: scaleY(1); }
+    48%{ transform: scaleY(0.05); }
+    52%{ transform: scaleY(0.05); }
+    100%{ transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ref-court__score.is-flipping{ animation: none; }
+  }
+
+  .ref-utility{
+    flex-shrink: 0; display: flex; gap: var(--space-3); padding: var(--space-4);
+  }
+  .ref-utility button{
+    flex: 1; appearance: none; border: none; border-radius: var(--radius-m); cursor: pointer;
+    background: var(--white); color: var(--navy); padding: var(--space-3) var(--space-2);
+    font-family: var(--font-body); font-weight: 800; font-size: 0.8rem; min-height: 56px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    transition: background .15s, transform .1s; box-shadow: var(--shadow-pop);
+  }
+  .ref-utility button:active{ transform: scale(0.96); background: var(--sky-tint); }
+  .ref-utility button svg{ width: 20px; height: 20px; }
+
+  /* ---------------------------------------------------------------- win overlay: the full result sheet */
+  .win-overlay{
+    position: fixed; inset: 0; z-index: 40; background: var(--lime);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: var(--space-5); overflow-y: auto;
+  }
+  .win-overlay[hidden]{ display: none; }
+  .win-sheet{ width: 100%; max-width: 640px; margin: auto; }
+  .win-sheet__head{ margin-bottom: var(--space-5); }
+  .win-overlay__eyebrow{
+    font-family: var(--font-body); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    font-size: 0.8rem; color: var(--navy-deep); opacity: 0.85; margin-bottom: var(--space-2);
+  }
+  .win-overlay__team{ font-family: var(--font-display); color: var(--navy-ink); font-size: clamp(1.8rem, 7vw, 3rem); line-height: 1.02; }
+  .win-sheet__winlabel{
+    font-family: var(--font-body); font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em;
+    font-size: 0.78rem; color: var(--navy-deep); opacity: 0.75; margin-top: var(--space-1);
+  }
+
+  .win-sheet__scoreline{
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-3);
+    background: var(--white); border-radius: var(--radius-l); box-shadow: var(--shadow-card);
+    padding: var(--space-4) var(--space-3);
+  }
+  .win-sheet__side{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .win-sheet__team{ font-family: var(--font-display); font-size: clamp(0.95rem, 3.5vw, 1.3rem); color: var(--navy); }
+  .win-sheet__players{ font-family: var(--font-body); font-weight: 600; font-size: 0.78rem; color: #4A6B85; overflow-wrap: anywhere; }
+  .win-overlay__score{
+    font-family: var(--font-display); color: var(--navy-ink); font-variant-numeric: tabular-nums;
+    font-size: clamp(1.8rem, 7vw, 2.8rem); white-space: nowrap; padding: 0 var(--space-2);
+  }
+
+  .win-sheet__meta{
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+  }
+  .win-sheet__meta div{
+    background: rgba(255,255,255,0.65); border-radius: var(--radius-m); padding: var(--space-3) var(--space-2);
+  }
+  .win-sheet__meta dt{
+    font-family: var(--font-body); font-weight: 800; font-size: 0.66rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--navy-deep); opacity: 0.65;
+  }
+  .win-sheet__meta dd{
+    margin: 2px 0 0; font-family: var(--font-body); font-weight: 800; font-size: 0.92rem; color: var(--navy-ink);
+  }
+
+  /* both teams tick to agree before the result is reported to the organisers */
+  .win-confirm{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-4); }
+  .win-confirm__box{
+    appearance: none; border: 2px solid rgba(8,42,68,0.25); background: rgba(255,255,255,0.7);
+    border-radius: var(--radius-m); padding: var(--space-3); cursor: pointer;
+    display: flex; align-items: center; gap: var(--space-2); text-align: left; min-height: 60px;
+    transition: background .15s, border-color .15s;
+  }
+  .win-confirm__tick{
+    width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+    border: 2px solid rgba(8,42,68,0.35); background: var(--white); color: transparent;
+    display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s, border-color .15s;
+  }
+  .win-confirm__text{
+    font-family: var(--font-body); font-weight: 700; font-size: 0.82rem; color: var(--navy-ink); line-height: 1.25;
+  }
+  .win-confirm__text b{ display: block; font-weight: 800; overflow-wrap: anywhere; }
+  .win-confirm__box[aria-pressed="true"]{ background: var(--navy); border-color: var(--navy); }
+  .win-confirm__box[aria-pressed="true"] .win-confirm__text{ color: var(--white); }
+  .win-confirm__box[aria-pressed="true"] .win-confirm__tick{ background: var(--lime); border-color: var(--lime); color: var(--navy-ink); }
+  .win-confirm__box:active{ transform: scale(0.99); }
+
+  .win-sheet__notice[hidden], .win-sheet__report[hidden]{ display: none; }
+  .win-sheet__notice{
+    display: flex; align-items: center; gap: var(--space-2); text-align: left;
+    background: var(--navy); color: var(--white); border-radius: var(--radius-m);
+    padding: var(--space-3) var(--space-4); margin-top: var(--space-4);
+    font-family: var(--font-body); font-weight: 700; font-size: 0.88rem; line-height: 1.35;
+  }
+  .win-sheet__notice svg{ flex-shrink: 0; color: var(--lime); }
+
+  .win-sheet__report{
+    margin-top: var(--space-3); background: rgba(8,42,68,0.08); border-radius: var(--radius-m);
+    padding: var(--space-3) var(--space-4); text-align: left; white-space: pre-line;
+    font-family: var(--font-body); font-weight: 600; font-size: 0.82rem; color: var(--navy-ink);
+  }
+
+  .win-overlay__actions{ display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-5); }
+  .win-overlay__actions .btn{ flex: 1 1 auto; min-width: 140px; }
+
+  @media (orientation: landscape) and (max-height: 560px){
+    .win-sheet__head{ margin-bottom: var(--space-3); }
+    .win-sheet__meta{ margin-top: var(--space-3); }
+    .win-sheet__notice{ margin-top: var(--space-3); padding: var(--space-2) var(--space-3); font-size: 0.8rem; }
+    .win-sheet__report{ display: none; }
+    .win-overlay__actions{ margin-top: var(--space-3); }
+  }
+
+  /* ---------------------------------------------------------------- timer overlay */
+  .timer-overlay{
+    position: fixed; inset: 0; z-index: 40; background: var(--navy-deep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: var(--space-6);
+  }
+  .timer-overlay[hidden]{ display: none; }
+  .timer-overlay__label{
+    font-family: var(--font-body); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    font-size: 0.95rem; color: rgba(207,231,250,0.9); margin-bottom: var(--space-4);
+  }
+  .timer-overlay__value{
+    font-family: var(--font-display); color: var(--lime); font-size: clamp(4rem, 22vw, 8rem);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .timer-overlay__value.is-done{ color: var(--danger); animation: timerPulse 0.7s ease-in-out infinite; }
+  @keyframes timerPulse{ 0%,100%{ opacity: 1; } 50%{ opacity: 0.4; } }
+  .timer-overlay__actions{ display: flex; gap: var(--space-3); margin-top: var(--space-7); }
+
+  @media (min-width: 640px){
+    .ref-boards{ flex-direction: row; align-items: stretch; }
+    .ref-boards.is-swapped{ flex-direction: row-reverse; }
+    .ref-board{ padding: var(--space-6); }
+    .ref-boards .ref-call{ flex: 0 0 180px; align-self: center; }
+  }
+
+  /* phone in landscape: short viewport, wide — shrink the chrome so both
+     boards and the center call stay huge, matching a real courtside scoreboard. */
+  @media (orientation: landscape) and (max-height: 560px){
+    .ref-play__bar{ padding: var(--space-2) var(--space-3); }
+    .ref-iconbtn{ width: 38px; height: 38px; }
+    .ref-iconbtn--labelled{ width: auto; height: 34px; padding: 0 var(--space-2); font-size: 0.72rem; }
+    .ref-play__format{ font-size: 0.7rem; }
+    .ref-court{ margin: var(--space-3); }
+    .ref-utility{ padding: 6px var(--space-3); gap: var(--space-2); }
+    .ref-utility button{ min-height: 40px; font-size: 0.74rem; flex-direction: row; gap: 6px; }
+    .ref-utility button svg{ width: 16px; height: 16px; }
+    .ref-scorebar{ padding: 0 var(--space-3); gap: var(--space-2); }
+    .ref-scorebar button{ min-height: 40px; font-size: 0.82rem; }
+  }
+
+  /* ---------------------------------------------------------------- keyboard focus */
+  .ref-choice button:focus-visible,
+  .ref-targets button:focus-visible,
+  .ref-courts button:focus-visible,
+  .ref-match:focus-visible,
+  .ref-tabs button:focus-visible,
+  .ref-flipbtn:focus-visible,
+  .ref-sticky-cta .btn:focus-visible,
+  .ref-iconbtn:focus-visible,
+  .ref-board:focus-visible,
+  .ref-utility button:focus-visible,
+  .ref-position__swaprow:focus-visible,
+  .ref-position__swapbtn:focus-visible,
+  .win-overlay__actions button:focus-visible,
+  .timer-overlay__actions button:focus-visible{
+    outline: 3px solid var(--lime); outline-offset: 3px;
+  }
+  .ref-teamrow input:focus-visible{ outline: 3px solid var(--sky); outline-offset: 2px; }
+</style>
+</head>
+<body class="referee-page" data-screen="select">
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg></span>
+      F1 PICKLEBALL
+    </a>
+    <button class="nav__toggle" data-nav-toggle aria-expanded="false" aria-controls="site-nav" aria-label="Mở menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Điều hướng chính">
+      <a class="nav__link" href="index.html">Trang chủ</a>
+      <a class="nav__link" href="schedule.html">Lịch thi đấu</a>
+      <a class="nav__link" href="rules.html">Điều lệ</a>
+      <a class="nav__link" href="coin-toss.html">Tung đồng xu</a>
+      <a class="nav__link" href="referee.html" aria-current="page">Bắt trận</a>
+    </nav>
+  </div>
+</header>
+
+<div class="ref-topline"></div>
+
+<main>
+  <!-- ============================================================ 1. SELECT COURT + MATCH ============================================================ -->
+  <section class="ref-screen" id="selectScreen">
+    <div class="ref-hero court-texture">
+      <div class="ref-hero__inner">
+        <h1 class="ref-title">Bắt trận</h1>
+        <p class="ref-lede">Chọn sân và trận đấu bạn sẽ bắt, hoặc nhập tay nếu chưa có trong lịch.</p>
+      </div>
+    </div>
+    <div class="ref-wrap">
+      <div class="ref-tabs" role="tablist">
+        <button type="button" id="tabLive" role="tab" aria-selected="true">Từ lịch thi đấu</button>
+        <button type="button" id="tabManual" role="tab" aria-selected="false">Nhập tay</button>
+      </div>
+
+      <div class="ref-card">
+        <span class="ref-card__label">Luật thắng ván</span>
+        <button type="button" class="ref-goldenpoint" id="goldenPointToggle" aria-pressed="true">
+          <span class="ref-goldenpoint__dot"></span>
+          <span class="ref-goldenpoint__text">
+            <span class="ref-goldenpoint__title">Golden Point</span>
+            <span class="ref-goldenpoint__sub">Chạm mốc là thắng, không cần cách 2 điểm</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- live schedule mode -->
+      <div class="ref-mode" id="modeLive" data-active="true">
+        <div class="ref-card">
+          <span class="ref-card__label">Chọn sân</span>
+          <div class="ref-courts" id="courtChips"></div>
+        </div>
+        <div id="sheetStatus" class="ref-sheet-status">Đang tải lịch thi đấu…</div>
+        <div class="ref-matches" id="matchList"></div>
+      </div>
+
+      <!-- manual mode -->
+      <div class="ref-mode" id="modeManual">
+        <div class="ref-card">
+          <span class="ref-card__label">Hai đội</span>
+          <div class="ref-teamrow">
+            <input id="manualNameA" type="text" value="Đội A" maxlength="20" aria-label="Tên đội A" />
+            <span class="ref-teamrow__vs">VS</span>
+            <input id="manualNameB" type="text" value="Đội B" maxlength="20" aria-label="Tên đội B" />
+          </div>
+        </div>
+        <div class="ref-card">
+          <span class="ref-card__label">Đấu đến bao nhiêu điểm</span>
+          <div class="ref-targets" role="group" aria-label="Chọn điểm thắng">
+            <button type="button" id="manualTarget11" aria-pressed="true">
+              <span class="ref-targets__num">11</span>
+              <span class="ref-targets__label">Vòng bảng</span>
+            </button>
+            <button type="button" id="manualTarget15" aria-pressed="false">
+              <span class="ref-targets__num">15</span>
+              <span class="ref-targets__label">Bán kết / Chung kết</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-sticky-cta">
+      <button type="button" class="btn btn--lime" id="selectContinueBtn" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7z"/></svg>
+        Bắt đầu
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ 2. COIN TOSS ============================================================ -->
+  <section class="ref-screen ref-toss" id="tossScreen">
+    <div class="ref-toss__hero court-texture">
+      <div class="ref-toss__bar">
+        <button type="button" class="ref-iconbtn" id="tossBackBtn" title="Quay lại chọn trận" aria-label="Quay lại chọn trận">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+      <h1 class="ref-toss__title">Ai giao bóng trước?</h1>
+      <p class="ref-toss__lede">Tung đồng xu, hoặc trọng tài chọn thẳng đội giao trước.</p>
+    </div>
+    <div class="ref-toss__inner">
+      <div class="ref-toss__names">
+        <span class="ref-toss__name" id="tossNameA">Đội A</span>
+        <span class="ref-toss__vs">VS</span>
+        <span class="ref-toss__name" id="tossNameB">Đội B</span>
+      </div>
+
+      <div class="ref-coin-stage">
+        <div class="ref-coin" id="tossCoin">
+          <div class="ref-coin__face ref-coin__face--a">
+            <span class="ref-coin__label">Mặt A</span>
+            <span class="ref-coin__name" id="tossCoinFaceA">Đội A</span>
+          </div>
+          <div class="ref-coin__face ref-coin__face--b">
+            <span class="ref-coin__label">Mặt B</span>
+            <span class="ref-coin__name" id="tossCoinFaceB">Đội B</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ref-toss__result ref-toss__result--empty" id="tossResult">Chưa chọn đội giao trước</div>
+
+      <button type="button" class="btn btn--navy ref-flipbtn" id="tossFlipBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:-4px;margin-right:6px;"><circle cx="12" cy="12" r="9"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1 3 2.2c0 2.8-3.4 2-3.4 4.8M12 17v.01"/></svg>
+        Tung đồng xu
+      </button>
+
+      <div class="ref-toss__divider">hoặc trọng tài chọn</div>
+
+      <div class="ref-choice" role="group" aria-label="Chọn đội giao trước">
+        <button type="button" id="tossPickA">Đội A giao trước</button>
+        <button type="button" id="tossPickB">Đội B giao trước</button>
+      </div>
+    </div>
+
+    <div class="ref-sticky-cta">
+      <button type="button" class="btn btn--lime" id="tossContinueBtn" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7z"/></svg>
+        Tiếp tục vào trận
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ 2b. CONFIRM POSITION ============================================================ -->
+  <section class="ref-screen ref-toss" id="positionScreen">
+    <div class="ref-toss__hero court-texture">
+      <div class="ref-toss__bar">
+        <button type="button" class="ref-iconbtn" id="positionBackBtn" title="Quay lại tung đồng xu" aria-label="Quay lại tung đồng xu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+      <h1 class="ref-toss__title">Xác nhận vị trí</h1>
+      <p class="ref-toss__lede">Sắp xếp đúng vị trí đứng thực tế của từng vận động viên trên sân.</p>
+    </div>
+    <div class="ref-toss__inner" style="max-width:560px;">
+      <div class="ref-position__columns" id="positionColumns"></div>
+      <button type="button" class="btn btn--navy ref-position__swapbtn" id="positionSwapBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px;"><path d="M7 8h11m0 0-3.5-3.5M18 8l-3.5 3.5M17 16H6m0 0 3.5 3.5M6 16l3.5-3.5"/></svg>
+        Đổi bên sân
+      </button>
+    </div>
+
+    <div class="ref-sticky-cta">
+      <button type="button" class="btn btn--lime" id="positionContinueBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7z"/></svg>
+        Tiếp tục vào trận
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================ 3. PLAY ============================================================ -->
+  <section class="ref-screen ref-play" id="playScreen">
+    <div class="ref-rotate-prompt">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="18" rx="2" transform="rotate(-90 10 16)"/><path d="M19 9a5 5 0 0 1 0 6M22 6a9 9 0 0 1 0 12"/></svg>
+      <p class="ref-rotate-prompt__title">Xoay ngang điện thoại</p>
+      <p class="ref-rotate-prompt__sub">Bảng bắt điểm được thiết kế cho màn hình ngang — giống bảng của trọng tài chuyên nghiệp.</p>
+    </div>
+
+    <div class="ref-play__stage">
+    <div class="ref-play__head">
+      <div class="ref-play__bar">
+        <button type="button" class="ref-iconbtn ref-iconbtn--labelled" id="exitBtn" title="Thoát về màn hình chọn trận">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span>Thoát</span>
+        </button>
+        <div class="ref-play__format">Đấu đến <b id="playTarget">11</b> điểm</div>
+        <div class="ref-play__bar-group">
+          <button type="button" class="ref-iconbtn ref-iconbtn--labelled" id="swapBtn" title="Đổi bên hiển thị hai đội" aria-pressed="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h11m0 0-3.5-3.5M18 8l-3.5 3.5M17 16H6m0 0 3.5 3.5M6 16l3.5-3.5"/></svg>
+            <span>Đổi bên</span>
+          </button>
+          <button type="button" class="ref-iconbtn ref-iconbtn--labelled" id="undoBtn" title="Hoàn tác pha bóng trước" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2M4 12V6M4 12h6"/></svg>
+            <span>Hoàn tác</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- the court: one framed grid, two service cells per side, scores flanking the net line -->
+    <div class="ref-court" id="refBoards">
+      <div class="ref-court__call" id="callValue">0<span>-</span>0<span>-</span>2</div>
+
+      <div class="ref-court__half ref-court__half--a" id="boardA" data-serving="false">
+        <span class="ref-court__team" id="boardNameA">Đội A</span>
+        <div class="ref-court__cells" id="playersA"></div>
+      </div>
+
+      <div class="ref-court__score ref-court__score--a" id="digitsA">0</div>
+      <div class="ref-court__net"></div>
+      <div class="ref-court__score ref-court__score--b" id="digitsB">0</div>
+
+      <div class="ref-court__half ref-court__half--b" id="boardB" data-serving="false">
+        <span class="ref-court__team" id="boardNameB">Đội B</span>
+        <div class="ref-court__cells" id="playersB"></div>
+      </div>
+    </div>
+
+    <div class="ref-scorebar" id="refScorebar">
+      <button type="button" id="scoreLeftBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span id="scoreLeftLabel">Điểm đội bên trái</span>
+      </button>
+      <button type="button" id="sideOutBtn">Tay 2</button>
+      <button type="button" id="scoreRightBtn">
+        <span id="scoreRightLabel">Điểm đội bên phải</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <div class="ref-utility">
+      <button type="button" id="timeoutBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>
+        Timeout 1 phút
+      </button>
+      <button type="button" id="medicalBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4.5 4.5 0 0 1 7-3.74A4.5 4.5 0 0 1 19 11c0 5.65-7 10-7 10Z"/><path d="M12 8v6M9 11h6"/></svg>
+        Y tế 3 phút
+      </button>
+      <button type="button" id="resetMatchBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2M4 12V6M4 12h6"/></svg>
+        Xóa điểm, đấu lại
+      </button>
+      <button type="button" id="newMatchBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+        Chọn trận khác
+      </button>
+    </div>
+    </div>
+  </section>
+</main>
+
+<div class="win-overlay" id="winOverlay" hidden>
+  <div class="win-sheet">
+    <div class="win-sheet__head">
+      <div class="win-overlay__eyebrow">Kết thúc trận</div>
+      <div class="win-overlay__team" id="winTeam">Đội A</div>
+      <div class="win-sheet__winlabel">thắng</div>
+    </div>
+
+    <div class="win-sheet__scoreline">
+      <div class="win-sheet__side">
+        <span class="win-sheet__team" id="winTeamA">Đội A</span>
+        <span class="win-sheet__players" id="winPlayersA"></span>
+      </div>
+      <div class="win-overlay__score" id="winScore">11 – 7</div>
+      <div class="win-sheet__side">
+        <span class="win-sheet__team" id="winTeamB">Đội B</span>
+        <span class="win-sheet__players" id="winPlayersB"></span>
+      </div>
+    </div>
+
+    <dl class="win-sheet__meta" id="winMeta"></dl>
+
+    <div class="win-confirm">
+      <button type="button" class="win-confirm__box" id="winAgreeA" aria-pressed="false">
+        <span class="win-confirm__tick">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+        </span>
+        <span class="win-confirm__text">
+          <b id="winAgreeNameA">Đội A</b>
+          đồng ý kết quả
+        </span>
+      </button>
+      <button type="button" class="win-confirm__box" id="winAgreeB" aria-pressed="false">
+        <span class="win-confirm__tick">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+        </span>
+        <span class="win-confirm__text">
+          <b id="winAgreeNameB">Đội B</b>
+          đồng ý kết quả
+        </span>
+      </button>
+    </div>
+
+    <div class="win-sheet__notice" id="winNotice" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17v.01"/><circle cx="12" cy="12" r="9"/></svg>
+      <span>Hai đội đã đồng ý — <b>báo kết quả này cho Ban tổ chức</b> để nhập điểm vào bảng xếp hạng.</span>
+    </div>
+
+    <div class="win-sheet__report" id="winReport" hidden></div>
+
+    <div class="win-overlay__actions">
+      <button type="button" class="btn btn--lime" id="winCopyBtn" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px;"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Sao chép báo cáo
+      </button>
+      <button type="button" class="btn btn--navy" id="winCloseBtn">Xem lại tỉ số</button>
+      <button type="button" class="btn btn--ghost" id="winNewBtn" style="border-color:var(--navy-deep);color:var(--navy-deep);">Trận khác</button>
+    </div>
+  </div>
+</div>
+
+<div class="win-overlay" id="resetConfirmOverlay" hidden style="background:var(--white);">
+  <div class="win-overlay__eyebrow" style="color:var(--danger);opacity:1;">Xác nhận reset</div>
+  <div class="win-overlay__team" style="color:var(--navy-ink);font-size:clamp(1.6rem,6vw,2.4rem);">Xóa toàn bộ điểm ván này?</div>
+  <div class="win-overlay__score" style="color:#4A6B85;font-family:var(--font-body);font-weight:700;font-size:1rem;">Đưa tỉ số về 0-0-2, giữ nguyên đội và vị trí giao bóng ban đầu.</div>
+  <div class="win-overlay__actions">
+    <button type="button" class="btn btn--ghost" id="resetCancelBtn" style="border-color:var(--navy-deep);color:var(--navy-deep);">Hủy</button>
+    <button type="button" class="btn btn--navy" id="resetConfirmBtn" style="background:var(--danger);">Reset ván</button>
+  </div>
+</div>
+
+<div class="timer-overlay" id="timerOverlay" hidden>
+  <div class="timer-overlay__label" id="timerLabel">Timeout</div>
+  <div class="timer-overlay__value" id="timerValue">1:00</div>
+  <div class="timer-overlay__actions">
+    <button type="button" class="btn btn--lime" id="timerDoneBtn">Kết thúc</button>
+  </div>
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/sheet-data.js"></script>
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const body = document.body;
+
+  function setScreen(name){
+    body.dataset.screen = name;
+    window.scrollTo(0, 0);
+  }
+
+  /* ================================================================ 1. SELECT SCREEN ================================================================ */
+  const tabLive = $('tabLive');
+  const tabManual = $('tabManual');
+  const modeLive = $('modeLive');
+  const modeManual = $('modeManual');
+  const courtChips = $('courtChips');
+  const sheetStatus = $('sheetStatus');
+  const matchList = $('matchList');
+  const manualNameA = $('manualNameA');
+  const manualNameB = $('manualNameB');
+  const manualTarget11 = $('manualTarget11');
+  const manualTarget15 = $('manualTarget15');
+  const selectContinueBtn = $('selectContinueBtn');
+
+  let mode = 'live';
+  function setMode(m){
+    mode = m;
+    tabLive.setAttribute('aria-selected', String(m === 'live'));
+    tabManual.setAttribute('aria-selected', String(m === 'manual'));
+    modeLive.dataset.active = String(m === 'live');
+    modeManual.dataset.active = String(m === 'manual');
+    updateSelectContinue();
+  }
+  tabLive.addEventListener('click', () => setMode('live'));
+  tabManual.addEventListener('click', () => setMode('manual'));
+
+  let manualTarget = 11;
+  function setManualTarget(t){
+    manualTarget = t;
+    manualTarget11.setAttribute('aria-pressed', String(t === 11));
+    manualTarget15.setAttribute('aria-pressed', String(t === 15));
+  }
+  manualTarget11.addEventListener('click', () => setManualTarget(11));
+  manualTarget15.addEventListener('click', () => setManualTarget(15));
+  manualNameA.addEventListener('input', updateSelectContinue);
+  manualNameB.addEventListener('input', updateSelectContinue);
+
+  const goldenPointToggle = $('goldenPointToggle');
+  let goldenPoint = true;
+  goldenPointToggle.addEventListener('click', () => {
+    goldenPoint = !goldenPoint;
+    goldenPointToggle.setAttribute('aria-pressed', String(goldenPoint));
+  });
+
+  let allMatches = [];
+  let nameMap = {};
+  let selectedCourt = null;
+  let selectedMatch = null;
+
+  function stageTarget(stage){
+    const s = (stage || '').toLowerCase();
+    if (s.includes('bán kết') || s.includes('chung kết')) return 15;
+    return 11;
+  }
+
+  function teamLabel(code){
+    if (!code) return '';
+    const players = nameMap[code];
+    return players ? `${code} · ${players}` : code;
+  }
+
+  function playersFor(code){
+    const raw = nameMap[code];
+    if (!raw) return [code || ''];
+    const parts = raw.split('/').map((s) => s.trim()).filter(Boolean);
+    return parts.length ? parts : [raw];
+  }
+
+  function renderCourts(){
+    const courts = [...new Set(allMatches.map((m) => m.court).filter(Boolean))]
+      .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    if (!courts.length){
+      courtChips.innerHTML = '';
+      return;
+    }
+    courtChips.innerHTML = courts.map((c) => `
+      <button type="button" data-court="${c}" aria-pressed="false">
+        ${c}<span>Sân</span>
+      </button>`).join('');
+    courtChips.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', () => selectCourt(btn.dataset.court));
+    });
+    if (!selectedCourt) selectCourt(courts[0]);
+  }
+
+  function selectCourt(court){
+    selectedCourt = court;
+    selectedMatch = null;
+    courtChips.querySelectorAll('button').forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.court === court));
+    });
+    renderMatches();
+    updateSelectContinue();
+  }
+
+  const STATUS_ATTR = { 'Hoàn thành': 'completed', 'Chưa thi đấu': 'scheduled' };
+  const STATUS_BADGE_LABEL = { completed: 'Hoàn thành', scheduled: 'Chưa thi đấu', pending: 'Chờ xác định' };
+
+  function matchRowHtml(code, score, isWinner){
+    const scoreHtml = score !== null
+      ? `<span class="score-box">${score}</span>`
+      : `<span class="score-box score-box--dash">–</span>`;
+    return `
+      <div class="match-row${isWinner ? ' match-row--winner' : ''}">
+        <span class="match-row__badge">${code || '?'}</span>
+        <div class="match-row__name">
+          <div class="match-row__code">${code || 'Chờ xác định'}</div>
+          <div class="match-row__players">${code ? (nameMap[code] || '') : 'Chờ xác định'}</div>
+        </div>
+        <div class="match-row__score">${scoreHtml}</div>
+      </div>`;
+  }
+
+  function renderMatches(){
+    const matches = allMatches.filter((m) => m.court === selectedCourt && m.teamA && m.teamB);
+    if (!matches.length){
+      matchList.innerHTML = '<div class="ref-empty">Chưa có trận nào được xếp vào sân này.</div>';
+      return;
+    }
+    matchList.innerHTML = matches.map((m) => {
+      const isHH = m.category.includes('Hỗn Hợp');
+      const badgeClass = isHH ? 'match-card__badge match-card__badge--hh' : 'match-card__badge';
+      const stage = m.stage || 'Vòng loại';
+      const timeLabel = m.start ? `${m.start}${m.court ? ` · Sân ${m.court}` : ''}` : '';
+      const status = STATUS_ATTR[m.status] || 'pending';
+      const hasScore = status === 'completed';
+      const scoreA = hasScore ? Number(m.scoreA) : null;
+      const scoreB = hasScore ? Number(m.scoreB) : null;
+      const aWins = hasScore && scoreA > scoreB;
+      const bWins = hasScore && scoreB > scoreA;
+      return `
+        <button type="button" class="ref-match match-card" data-status="${status}" data-match-id="${m.matchId}" aria-pressed="false">
+          <span class="ref-match__check" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+          </span>
+          <div class="match-card__head">
+            <span class="${badgeClass}">${isHH ? 'Hỗn hợp' : 'Nam'}</span>
+            <span class="match-card__badge">${stage}</span>
+            <span class="match-card__badge match-card__badge--${status}">${STATUS_BADGE_LABEL[status]}</span>
+          </div>
+          ${matchRowHtml(m.teamA, scoreA, aWins)}
+          ${matchRowHtml(m.teamB, scoreB, bWins)}
+          ${timeLabel ? `<div class="match-card__foot">🕒 ${timeLabel}</div>` : ''}
+        </button>`;
+    }).join('');
+    matchList.querySelectorAll('.ref-match').forEach((el) => {
+      el.addEventListener('click', () => {
+        const m = matches.find((x) => x.matchId === el.dataset.matchId);
+        selectedMatch = m;
+        matchList.querySelectorAll('.ref-match').forEach((x) => x.setAttribute('aria-pressed', String(x === el)));
+        updateSelectContinue();
+      });
+    });
+  }
+
+  function updateSelectContinue(){
+    if (mode === 'manual'){
+      const ok = manualNameA.value.trim().length > 0 && manualNameB.value.trim().length > 0;
+      selectContinueBtn.disabled = !ok;
+    } else {
+      selectContinueBtn.disabled = !selectedMatch;
+    }
+  }
+
+  async function loadSchedule(){
+    try {
+      const [matches, standings] = await Promise.all([loadMatches(), loadStandings()]);
+      allMatches = matches;
+      nameMap = buildTeamNameMap(standings);
+      sheetStatus.style.display = 'none';
+      renderCourts();
+      renderMatches();
+    } catch (err) {
+      console.error(err);
+      sheetStatus.textContent = 'Không tải được lịch thi đấu — dùng tab "Nhập tay" để bắt trận thủ công.';
+    }
+  }
+  loadSchedule();
+
+  let flowData = null; // { teamA:{code,players}, teamB:{code,players}, target }
+
+  selectContinueBtn.addEventListener('click', () => {
+    if (mode === 'manual'){
+      flowData = {
+        teamA: { code: manualNameA.value.trim() || 'Đội A', players: [manualNameA.value.trim() || 'Đội A'] },
+        teamB: { code: manualNameB.value.trim() || 'Đội B', players: [manualNameB.value.trim() || 'Đội B'] },
+        target: manualTarget,
+        goldenPoint,
+      };
+    } else if (selectedMatch){
+      flowData = {
+        teamA: { code: selectedMatch.teamA, players: playersFor(selectedMatch.teamA) },
+        teamB: { code: selectedMatch.teamB, players: playersFor(selectedMatch.teamB) },
+        target: stageTarget(selectedMatch.stage),
+        goldenPoint,
+      };
+    } else {
+      return;
+    }
+    enterToss();
+  });
+
+  /* ================================================================ 2. TOSS SCREEN ================================================================ */
+  const tossBackBtn = $('tossBackBtn');
+  const tossNameA = $('tossNameA');
+  const tossNameB = $('tossNameB');
+  const tossCoin = $('tossCoin');
+  const tossCoinFaceA = $('tossCoinFaceA');
+  const tossCoinFaceB = $('tossCoinFaceB');
+  const tossResult = $('tossResult');
+  const tossFlipBtn = $('tossFlipBtn');
+  const tossPickA = $('tossPickA');
+  const tossPickB = $('tossPickB');
+  const tossContinueBtn = $('tossContinueBtn');
+
+  let startingServer = null;
+  let coinTurns = 6;
+
+  function teamShortLabel(team){
+    return team.code || team.players.join(' / ');
+  }
+
+  function nameHtml(team){
+    const players = team.players.join(' / ');
+    if (team.code && players && players !== team.code){
+      return `<span class="ref-toss__name-code">${team.code}</span><span class="ref-toss__name-players">${players}</span>`;
+    }
+    return `<span class="ref-toss__name-code">${teamShortLabel(team)}</span>`;
+  }
+
+  function enterToss(){
+    tossNameA.innerHTML = nameHtml(flowData.teamA);
+    tossNameB.innerHTML = nameHtml(flowData.teamB);
+    tossCoinFaceA.textContent = teamShortLabel(flowData.teamA);
+    tossCoinFaceB.textContent = teamShortLabel(flowData.teamB);
+    startingServer = null;
+    tossResult.textContent = 'Chưa chọn đội giao trước';
+    tossResult.classList.add('ref-toss__result--empty');
+    tossPickA.setAttribute('aria-pressed', 'false');
+    tossPickB.setAttribute('aria-pressed', 'false');
+    tossContinueBtn.disabled = true;
+    setScreen('toss');
+  }
+
+  function setStartingServer(team, source){
+    startingServer = team;
+    const name = teamShortLabel(team === 'A' ? flowData.teamA : flowData.teamB);
+    tossResult.classList.remove('ref-toss__result--empty');
+    tossResult.innerHTML = `<strong>${name}</strong> giao trước${source ? ` — ${source}` : ''}`;
+    tossPickA.setAttribute('aria-pressed', String(team === 'A'));
+    tossPickB.setAttribute('aria-pressed', String(team === 'B'));
+    tossContinueBtn.disabled = false;
+  }
+
+  tossPickA.addEventListener('click', () => setStartingServer('A', 'trọng tài chọn'));
+  tossPickB.addEventListener('click', () => setStartingServer('B', 'trọng tài chọn'));
+
+  let flipping = false;
+  tossFlipBtn.addEventListener('click', () => {
+    if (flipping) return;
+    flipping = true;
+    tossFlipBtn.disabled = true;
+    tossResult.classList.add('ref-toss__result--empty');
+    tossResult.textContent = 'Đang tung…';
+
+    const landsOnA = Math.random() < 0.5;
+    coinTurns += 6;
+    const endDeg = coinTurns * 360 + (landsOnA ? 0 : 180);
+    tossCoin.style.setProperty('--ref-coin-end', `${endDeg}deg`);
+    tossCoin.classList.remove('is-flipping');
+    void tossCoin.offsetWidth;
+    tossCoin.classList.add('is-flipping');
+    tossCoin.style.transform = `rotateY(${endDeg}deg)`;
+
+    setTimeout(() => {
+      flipping = false;
+      tossFlipBtn.disabled = false;
+      setStartingServer(landsOnA ? 'A' : 'B', 'tung đồng xu');
+    }, 2250);
+  });
+
+  tossBackBtn.addEventListener('click', () => setScreen('select'));
+
+  tossContinueBtn.addEventListener('click', () => {
+    if (!startingServer) return;
+    enterPosition();
+  });
+
+  /* ================================================================ 2b. POSITION SCREEN ================================================================ */
+  const positionBackBtn = $('positionBackBtn');
+  const positionColumns = $('positionColumns');
+  const positionSwapBtn = $('positionSwapBtn');
+  const positionContinueBtn = $('positionContinueBtn');
+
+  let posPlayersA = [];
+  let posPlayersB = [];
+  let swapped = false; // left/right screen order — also drives the play-screen board order
+
+  function initials(name){
+    const words = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '?';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+
+  function positionHalfHtml(team, players, key, side){
+    const cells = players.map((name, i) => `
+      <div class="ref-court__cell ref-court__cell--pos" data-pos-team="${key}" data-pos-index="${i}">
+        <span class="ref-position__avatar">${initials(name)}</span>
+        <span>${name}</span>
+      </div>`).join('');
+    const swapBtnHtml = players.length === 2
+      ? `<button type="button" class="ref-position__swaprow" data-swap-team="${key}" title="Đổi vị trí trong đội" aria-label="Đổi vị trí trong đội">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l4-4 4 4M12 3v18M16 17l-4 4-4-4"/></svg>
+        </button>`
+      : '';
+    return `
+      <div class="ref-court__half ref-court__half--${side}">
+        <span class="ref-court__team">${teamShortLabel(team)}</span>
+        <div class="ref-court__cells">${cells}</div>
+        ${swapBtnHtml}
+      </div>`;
+  }
+
+  function renderPosition(){
+    const leftKey = swapped ? 'B' : 'A';
+    const rightKey = swapped ? 'A' : 'B';
+    const leftTeam = swapped ? flowData.teamB : flowData.teamA;
+    const rightTeam = swapped ? flowData.teamA : flowData.teamB;
+    const leftPlayers = swapped ? posPlayersB : posPlayersA;
+    const rightPlayers = swapped ? posPlayersA : posPlayersB;
+    positionColumns.innerHTML =
+      positionHalfHtml(leftTeam, leftPlayers, leftKey, 'a') +
+      '<div class="ref-court__net"></div>' +
+      positionHalfHtml(rightTeam, rightPlayers, rightKey, 'b');
+    positionColumns.querySelectorAll('[data-swap-team]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.swapTeam === 'A') posPlayersA.reverse();
+        else posPlayersB.reverse();
+        renderPosition();
+      });
+    });
+  }
+
+  function enterPosition(){
+    posPlayersA = [...flowData.teamA.players];
+    posPlayersB = [...flowData.teamB.players];
+    renderPosition();
+    setScreen('position');
+  }
+
+  positionSwapBtn.addEventListener('click', () => {
+    swapped = !swapped;
+    renderPosition();
+  });
+  positionBackBtn.addEventListener('click', () => setScreen('toss'));
+  positionContinueBtn.addEventListener('click', () => startMatch());
+
+  /* ================================================================ 3. PLAY SCREEN ================================================================ */
+  const boardA = $('boardA');
+  const boardB = $('boardB');
+  const playersA = $('playersA');
+  const playersB = $('playersB');
+  const digitsA = $('digitsA');
+  const digitsB = $('digitsB');
+  const callValue = $('callValue');
+  const playTarget = $('playTarget');
+  const undoBtn = $('undoBtn');
+  const swapBtn = $('swapBtn');
+  const refBoards = $('refBoards');
+  const exitBtn = $('exitBtn');
+  const newMatchBtn = $('newMatchBtn');
+  const resetMatchBtn = $('resetMatchBtn');
+  const resetConfirmOverlay = $('resetConfirmOverlay');
+  const resetCancelBtn = $('resetCancelBtn');
+  const resetConfirmBtn = $('resetConfirmBtn');
+
+  const scoreLeftBtn = $('scoreLeftBtn');
+  const scoreRightBtn = $('scoreRightBtn');
+  const scoreLeftLabel = $('scoreLeftLabel');
+  const scoreRightLabel = $('scoreRightLabel');
+  const sideOutBtn = $('sideOutBtn');
+
+  const winOverlay = $('winOverlay');
+  const winTeam = $('winTeam');
+  const winScore = $('winScore');
+  const winCloseBtn = $('winCloseBtn');
+  const winNewBtn = $('winNewBtn');
+  const winTeamAEl = $('winTeamA');
+  const winTeamBEl = $('winTeamB');
+  const winPlayersAEl = $('winPlayersA');
+  const winPlayersBEl = $('winPlayersB');
+  const winMeta = $('winMeta');
+  const winNotice = $('winNotice');
+  const winReport = $('winReport');
+  const winCopyBtn = $('winCopyBtn');
+  const winAgreeA = $('winAgreeA');
+  const winAgreeB = $('winAgreeB');
+  const winAgreeNameA = $('winAgreeNameA');
+  const winAgreeNameB = $('winAgreeNameB');
+
+  const timeoutBtn = $('timeoutBtn');
+  const medicalBtn = $('medicalBtn');
+  const timerOverlay = $('timerOverlay');
+  const timerLabel = $('timerLabel');
+  const timerValue = $('timerValue');
+  const timerDoneBtn = $('timerDoneBtn');
+
+  swapBtn.addEventListener('click', () => {
+    swapped = !swapped;
+    refBoards.classList.toggle('is-swapped', swapped);
+    swapBtn.setAttribute('aria-pressed', String(swapped));
+    if (state) render();
+  });
+
+  /* ---------------- score digit ---------------- */
+  function setScore(el, value){
+    if (el.textContent === String(value)) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion){ el.textContent = value; return; }
+    el.classList.remove('is-flipping');
+    void el.offsetWidth;
+    el.classList.add('is-flipping');
+    setTimeout(() => { el.textContent = value; }, 180);
+    el.addEventListener('animationend', () => el.classList.remove('is-flipping'), { once: true });
+  }
+
+  /* ---------------- match state ---------------- */
+  let state = null;
+  let history = [];
+
+  /* Viewed top-down, each team's right service court sits on the opposite screen
+     edge: for the team on the left half it is the LOWER cell, for the team on the
+     right half it is the UPPER cell. The first server always stands there. */
+  function rightCourtIndex(team){
+    const isOnLeftHalf = swapped ? team === 'B' : team === 'A';
+    return isOnLeftHalf ? 1 : 0;
+  }
+
+  function newState(){
+    return {
+      names: { A: teamShortLabel(flowData.teamA), B: teamShortLabel(flowData.teamB) },
+      players: { A: [...posPlayersA], B: [...posPlayersB] },
+      score: { A: 0, B: 0 },
+      serving: startingServer,
+      serverIdx: rightCourtIndex(startingServer), // which cell the server stands in
+      serverTurn: 2,                                // first team of the game gets one serve only
+      target: flowData.target,
+      goldenPoint: flowData.goldenPoint,
+      finished: false,
+    };
+  }
+
+  function snapshot(){
+    history.push(JSON.parse(JSON.stringify(state)));
+    undoBtn.disabled = false;
+  }
+
+  function renderPlayers(container, team){
+    const players = state.players[team];
+    const isServing = state.serving === team;
+    const rightIdx = rightCourtIndex(team);
+    container.innerHTML = players.map((name, i) => `
+      <div class="ref-court__cell" data-team="${team}" data-index="${i}" data-active="${isServing && state.serverIdx === i}">
+        <span class="ref-court__side">${i === rightIdx ? 'Phải' : 'Trái'}</span>
+        <span class="ref-court__player">${name}</span>
+      </div>
+    `).join('');
+  }
+
+  // manual serve override: tap a player's name to designate them as server, no score change
+  function setManualServer(team, index){
+    if (state.finished) return;
+    snapshot();
+    state.serving = team;
+    state.serverIdx = index;
+    render();
+  }
+  playersA.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const el = e.target.closest('[data-index]');
+    if (el) setManualServer(el.dataset.team, Number(el.dataset.index));
+  });
+  playersB.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const el = e.target.closest('[data-index]');
+    if (el) setManualServer(el.dataset.team, Number(el.dataset.index));
+  });
+
+  function render(){
+    $('boardNameA').textContent = state.names.A;
+    $('boardNameB').textContent = state.names.B;
+    renderPlayers(playersA, 'A');
+    renderPlayers(playersB, 'B');
+    setScore(digitsA, state.score.A);
+    setScore(digitsB, state.score.B);
+    boardA.dataset.serving = String(state.serving === 'A');
+    boardB.dataset.serving = String(state.serving === 'B');
+    playTarget.textContent = state.target;
+
+    const servingScore = state.score[state.serving];
+    const otherTeam = state.serving === 'A' ? 'B' : 'A';
+    const receivingScore = state.score[otherTeam];
+    callValue.innerHTML = `${servingScore}<span>-</span>${receivingScore}<span>-</span>${state.serverTurn}`;
+
+    const leftTeam = swapped ? 'B' : 'A';
+    const rightTeam = swapped ? 'A' : 'B';
+    scoreLeftLabel.textContent = `Điểm ${state.names[leftTeam]}`;
+    scoreRightLabel.textContent = `Điểm ${state.names[rightTeam]}`;
+    scoreLeftBtn.dataset.serving = String(state.serving === leftTeam);
+    scoreRightBtn.dataset.serving = String(state.serving === rightTeam);
+    scoreLeftBtn.disabled = state.finished || state.serving !== leftTeam;
+    scoreRightBtn.disabled = state.finished || state.serving !== rightTeam;
+    sideOutBtn.disabled = state.finished;
+    // tay 1 đang giao → nút chuyển tay 2 (cùng đội); tay 2 → nút side out (đổi đội)
+    sideOutBtn.textContent = state.serverTurn === 1 ? 'Chuyển tay 2' : 'Side Out';
+    sideOutBtn.dataset.mode = state.serverTurn === 1 ? 'switch' : 'sideout';
+  }
+
+  function checkWin(){
+    const { A, B } = state.score;
+    const leadScore = Math.max(A, B);
+    const diff = Math.abs(A - B);
+    if (leadScore < state.target) return;
+    if (!state.goldenPoint && diff < 2) return; // extended play: must win by 2
+    state.finished = true;
+    showResult(A > B ? 'A' : 'B');
+  }
+
+  /* ---------------- result sheet ---------------- */
+  let agreed = { A: false, B: false };
+
+  function showResult(winner){
+    const { A, B } = state.score;
+    winTeam.textContent = state.names[winner];
+    winScore.textContent = `${A} – ${B}`;
+    winTeamAEl.textContent = state.names.A;
+    winTeamBEl.textContent = state.names.B;
+    winPlayersAEl.textContent = flowData.teamA.players.join(' / ');
+    winPlayersBEl.textContent = flowData.teamB.players.join(' / ');
+    winAgreeNameA.textContent = state.names.A;
+    winAgreeNameB.textContent = state.names.B;
+
+    const m = selectedMatch;
+    const rows = [
+      ['Nội dung', m ? (m.category || '—') : 'Nhập tay'],
+      ['Vòng đấu', m ? (m.stage || '—') : '—'],
+      ['Sân', m && m.court ? `Sân ${m.court}` : '—'],
+      ['Giờ bắt đầu', m && m.start ? m.start : '—'],
+      ['Thể thức', `Đến ${state.target} điểm${state.goldenPoint ? ' · Golden Point' : ' · cách 2'}`],
+      ['Kết thúc lúc', new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })],
+    ];
+    winMeta.innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+
+    const matchLabel = m ? `${m.matchId}${m.court ? ` · Sân ${m.court}` : ''}` : 'Trận nhập tay';
+    winReport.textContent =
+      `KẾT QUẢ TRẬN — ${matchLabel}\n` +
+      `${state.names.A} ${A} – ${B} ${state.names.B}\n` +
+      `Thắng: ${state.names[winner]}\n` +
+      `Thể thức: đến ${state.target} điểm${state.goldenPoint ? ' (Golden Point)' : ' (cách 2)'}\n` +
+      `Hai đội đã xác nhận đồng ý kết quả.`;
+
+    agreed = { A: false, B: false };
+    syncAgree();
+    winOverlay.hidden = false;
+  }
+
+  function syncAgree(){
+    winAgreeA.setAttribute('aria-pressed', String(agreed.A));
+    winAgreeB.setAttribute('aria-pressed', String(agreed.B));
+    const both = agreed.A && agreed.B;
+    winNotice.hidden = !both;
+    winReport.hidden = !both;
+    winCopyBtn.disabled = !both;
+  }
+
+  winAgreeA.addEventListener('click', () => { agreed.A = !agreed.A; syncAgree(); });
+  winAgreeB.addEventListener('click', () => { agreed.B = !agreed.B; syncAgree(); });
+
+  winCopyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(winReport.textContent);
+      winCopyBtn.textContent = '✓ Đã sao chép';
+      setTimeout(() => { winCopyBtn.textContent = 'Sao chép báo cáo'; }, 1800);
+    } catch (err) {
+      console.error(err);
+      winCopyBtn.textContent = 'Không sao chép được — chụp màn hình';
+    }
+  });
+
+  function pointFor(team){
+    if (state.finished) return;
+    snapshot();
+    if (team === state.serving){
+      state.score[team] += 1;
+      // the serving pair swaps courts on every point they win — same player keeps
+      // serving, so the server index follows them into the other cell
+      if (state.players[team].length === 2){
+        state.players[team].reverse();
+        state.serverIdx = 1 - state.serverIdx;
+      }
+      render();
+      checkWin();
+    } else {
+      if (state.serverTurn === 1){
+        // partner takes over as second server, from the other cell
+        state.serverTurn = 2;
+        if (state.players[state.serving].length === 2) state.serverIdx = 1 - state.serverIdx;
+      } else {
+        // side out: the other team serves, starting from their right court
+        state.serving = team;
+        state.serverTurn = 1;
+        state.serverIdx = rightCourtIndex(team);
+      }
+      render();
+    }
+  }
+
+  // the +left / tay2-or-sideout / +right bar is the only way to score — court cells pick the server
+  scoreLeftBtn.addEventListener('click', () => pointFor(swapped ? 'B' : 'A'));
+  scoreRightBtn.addEventListener('click', () => pointFor(swapped ? 'A' : 'B'));
+  sideOutBtn.addEventListener('click', () => { if (state) pointFor(state.serving === 'A' ? 'B' : 'A'); });
+
+  undoBtn.addEventListener('click', () => {
+    if (!history.length) return;
+    state = history.pop();
+    winOverlay.hidden = true;
+    render();
+    undoBtn.disabled = history.length === 0;
+  });
+
+  function startMatch(){
+    state = newState();
+    history = [];
+    undoBtn.disabled = true;
+    winOverlay.hidden = true;
+    digitsA.textContent = digitsB.textContent = '-';
+    refBoards.classList.toggle('is-swapped', swapped);
+    swapBtn.setAttribute('aria-pressed', String(swapped));
+    render();
+    setScreen('play');
+  }
+
+  exitBtn.addEventListener('click', () => setScreen('select'));
+  newMatchBtn.addEventListener('click', () => { winOverlay.hidden = true; setScreen('select'); });
+  winNewBtn.addEventListener('click', () => { winOverlay.hidden = true; setScreen('select'); });
+  winCloseBtn.addEventListener('click', () => { winOverlay.hidden = true; });
+
+  resetMatchBtn.addEventListener('click', () => { resetConfirmOverlay.hidden = false; });
+  resetCancelBtn.addEventListener('click', () => { resetConfirmOverlay.hidden = true; });
+  resetConfirmBtn.addEventListener('click', () => {
+    resetConfirmOverlay.hidden = true;
+    startMatch(); // same flowData/startingServer/posPlayers → fresh 0-0-2
+  });
+
+  /* ---------------- timeout / medical timers ---------------- */
+  let timerInterval = null;
+  function startTimer(seconds, label){
+    clearInterval(timerInterval);
+    timerLabel.textContent = label;
+    let remaining = seconds;
+    timerValue.classList.remove('is-done');
+    const paint = () => {
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      timerValue.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    };
+    paint();
+    timerOverlay.hidden = false;
+    timerInterval = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0){
+        remaining = 0;
+        paint();
+        timerValue.classList.add('is-done');
+        timerValue.textContent = 'Hết giờ';
+        clearInterval(timerInterval);
+        return;
+      }
+      paint();
+    }, 1000);
+  }
+  timeoutBtn.addEventListener('click', () => startTimer(60, 'Timeout'));
+  medicalBtn.addEventListener('click', () => startTimer(180, 'Y tế'));
+  timerDoneBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    timerOverlay.hidden = true;
+  });
+
+  /* ---------------- init ---------------- */
+  setManualTarget(11);
+  updateSelectContinue();
+})();
+</script>
+</body>
+</html>
