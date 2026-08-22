@@ -1704,6 +1704,13 @@ review, the verdict, DESIGN.md, and every shipping raster carrying its provenanc
   /* ---------------- init ---------------- */
   setManualTarget(11);
   updateSelectContinue();
+
+  // The overlay restores the last published state on start so an OBS restart
+  // mid-match does not blank the score. That snapshot outlives the match, though:
+  // reload or reopen this page and the stream would still be showing the old one.
+  // Loading the referee means no match is in progress yet, so clear it here — this
+  // page is the only writer, and it is starting from the select screen.
+  pushOBS();
 })();
 </script>
 </body>

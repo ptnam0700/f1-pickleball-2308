@@ -70,7 +70,10 @@ not let them talk. Mixing `localhost` in one and `127.0.0.1` in the other breaks
   canvases.
 - The overlay fades out whenever the referee leaves the play screen, and reads the
   last published state from `localStorage` on start, so refreshing the Browser
-  Source mid-match restores the live score instead of blanking it.
+  Source mid-match restores the live score instead of blanking it. Loading
+  `referee.html` clears that snapshot, so reopening the dock always leaves the
+  overlay blank until a new match starts — otherwise the stream would keep showing
+  a match that ended before the last reload.
 - It mirrors the referee's left/right swap, so the card reads in the same order as
   the camera.
 
